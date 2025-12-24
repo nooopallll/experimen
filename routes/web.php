@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OrderController;
 
 Route::get('/', function () {
     // return view('welcome');
@@ -26,6 +27,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+
+Route::middleware(['auth'])->group(function () {
+    // Jalur untuk mengecek nomor (Baru/Repeat)
+    Route::post('/order/check', [OrderController::class, 'checkNumber'])->name('order.check');
+    
+    // Jalur untuk menyimpan data order final
+    Route::post('/order/store', [OrderController::class, 'store'])->name('orders.store');
+    
+    // Jalur untuk halaman manajemen pesanan (tabel)
+    Route::get('/manajemen-pesanan', [OrderController::class, 'index'])->name('pesanan.index');
 });
 
 require __DIR__.'/auth.php';

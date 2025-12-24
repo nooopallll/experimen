@@ -19,11 +19,11 @@
     <aside class="w-64 bg-[#003d4d] text-white flex flex-col p-6 rounded-r-[30px]">
         <div class="flex flex-col items-center mb-10">
             <img src="{{ asset('path_to_avatar.png') }}" class="w-20 h-20 rounded-full border-2 border-gray-400 mb-2">
-            <h2 class="font-bold text-lg">Louwes care</h2>
-            <p class="text-xs text-gray-300 text-center mt-2">Jl. Jogja Samping Kanan</p>
+            <h2 class="font-bold text-lg">Louwes Care</h2>
+            <p class="text-xs text-gray-300 text-center mt-2">JL. Ringroad Timur No 9, Plumbon , Banguntapan , Bantul , DIY 55196</p>
             <div class="text-xs text-gray-300 mt-1">
-                <p>📧 user1@gmail.com</p>
-                <p>📞 087248162733</p>
+                <p>📧 Admin@gmail.com</p>
+                <p>📞 081390154885</p>
             </div>
         </div>
 
