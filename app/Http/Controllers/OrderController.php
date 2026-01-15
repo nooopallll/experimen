@@ -219,7 +219,7 @@ public function checkCustomer(Request $request)
 
     if ($customer) {
         $poin = $customer->member ? $customer->member->poin : 0;
-        $targetPoin = 10; // Contoh: Target 10 poin untuk klaim
+        $targetPoin = 8; // Contoh: Target 10 poin untuk klaim
         
         return response()->json([
             'found' => true,
@@ -227,7 +227,8 @@ public function checkCustomer(Request $request)
             'tipe' => $customer->member ? 'Member' : 'Regular',
             'poin' => $poin,
             'target' => $targetPoin, 
-            'bisa_claim' => $poin >= $targetPoin // True jika poin cukup
+            'bisa_claim' => $poin >= $targetPoin, // True jika poin cukup
+            'member_id' => $customer->member ? $customer->member->id : null,
         ]);
     }
 

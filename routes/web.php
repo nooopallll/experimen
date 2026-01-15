@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/check-customer', [OrderController::class, 'checkCustomer'])->name('check.customer');
 
+    Route::post('/members/claim', [MemberController::class, 'claimPoints'])->name('members.claim');
     
 
     // ==========================================

@@ -40,7 +40,7 @@
             <table class="w-full text-left border-collapse">
                 <thead class="bg-white">
                     <tr class="border-b border-black">
-                        <th class="p-4 font-bold text-gray-900 w-16 text-center">ID</th>
+                        <th class="p-4 font-bold text-gray-900 text-center">No. Invoice</th>
                         <th class="p-4 font-bold text-gray-900">Tanggal</th>
                         <th class="p-4 font-bold text-gray-900">Nama</th>
                         <th class="p-4 font-bold text-gray-900">Sepatu</th>
@@ -53,8 +53,10 @@
                 <tbody class="divide-y divide-gray-200">
     @forelse($orders as $order)
         <tr class="border-b border-black hover:bg-gray-50 transition duration-150">
-            {{-- ID --}}
-            <td class="p-4 font-bold text-gray-900 text-center align-middle">{{ $loop->iteration }}</td>
+            {{-- No. Invoice --}}
+<td class="p-4 font-bold text-blue-600 text-center align-middle text-sm">
+    {{ $order->no_invoice }}
+</td>
             
             {{-- Tanggal --}}
             <td class="p-4 font-bold text-gray-900 align-middle">{{ $order->created_at->format('d/m/Y') }}</td>

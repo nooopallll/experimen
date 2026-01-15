@@ -15,7 +15,7 @@
             {{-- HIDDEN INPUTS --}}
             <input type="hidden" name="tipe_customer" id="tipe_customer_input" value="{{ $status ?? 'Baru' }}">
             <input type="hidden" name="is_registered_member" id="is_registered_member" value="{{ $is_member ?? 0 }}">
-            <input type="hidden" name="member_id" id="member_id">
+            <input type="hidden" name="member_id" id="member_id" value="{{ $customer->member->id ?? '' }}">
 
             {{-- ROW 1: NAMA & NO HP --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -106,15 +106,21 @@
                 </div>
 
                 {{-- POINT (NEW SECTION) --}}
-                <div class="bg-[#E0E0E0] rounded-lg p-3 px-5 flex items-center justify-between">
-                    <label class="text-sm font-semibold text-gray-600">Point</label>
-                    <div class="flex items-center gap-3">
-                        <span id="poin-text" class="text-gray-800 font-bold text-lg">0/8</span>
-                        <button type="button" id="btn-claim" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow hover:bg-blue-700 transition hidden">
-                            Claim
-                        </button>
-                    </div>
-                </div>
+                <div id="box-point" class="bg-[#E0E0E0] rounded-lg p-3 px-5 flex items-center justify-between {{ ($is_member ?? false) ? '' : 'hidden' }}">
+    <label class="text-sm font-semibold text-gray-600">Point</label>
+    <div class="flex items-center gap-3">
+        <span id="poin-text" class="text-gray-800 font-bold text-lg">{{ $poin ?? 0 }}/8</span>
+       @php
+    $poinSekarang = $customer->member->poin ?? 0; // Ambil poin dari data customer yang diload (jika ada)
+    $targetPoin = 8; // Samakan dengan controller
+@endphp
+
+<button type="button" id="btn-claim" onclick="claimReward()" 
+        class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded shadow hover:bg-blue-700 transition {{ $poinSekarang >= $targetPoin ? '' : 'hidden' }}">
+    Claim
+</button>
+    </div>
+</div>
 
                 {{-- Tipe Customer --}}
                 <div class="bg-[#E0E0E0] rounded-lg p-3 px-5">
@@ -175,56 +181,66 @@
                             no_hp: noHp
                         },
                         success: function (response) {
-                            if (response.found) {
-                                // Isi Nama & Tipe
-                                document.getElementById('nama_customer').value = response.nama;
-                                document.getElementById('display_tipe_customer').value = response.tipe;
-                                document.getElementById('tipe_customer_input').value = response.tipe;
-                                
-                                // Set Badge Member & ID
-                                if(response.tipe === 'Member') {
-                                    document.getElementById('member_id').value = response.id;
-                                    document.getElementById('is_registered_member').value = 1;
-                                    
-                                    // Sembunyikan tombol daftar member
-                                    document.getElementById('btn-daftar-member').classList.add('hidden');
-                                    
-                                    // Update Badge Status di Header
-                                    const badge = document.getElementById('badge-status');
-                                    badge.innerText = 'Member';
-                                    badge.className = 'text-xl font-bold text-pink-500';
-                                } else {
-                                    document.getElementById('is_registered_member').value = 0;
-                                    document.getElementById('badge-status').innerText = 'Baru';
-                                    document.getElementById('badge-status').className = 'text-xl font-bold text-blue-500';
-                                }
+    if (response.found) {
+        // Isi Nama & Tipe
+        document.getElementById('nama_customer').value = response.nama;
+        document.getElementById('display_tipe_customer').value = response.tipe;
+        document.getElementById('tipe_customer_input').value = response.tipe;
+        
+        // LOGIKA BARU: TAMPILKAN/SEMBUNYIKAN BOX POINT
+        if(response.tipe === 'Member') {
+            // TAMPILKAN BOX POINT
+            document.getElementById('box-point').classList.remove('hidden'); 
 
-                                // --- LOGIKA POIN TARGET 8 ---
-                                let currentPoint = response.poin || 0;
-                                let targetPoint = 8; 
-                                
-                                // Update Text Poin "x/8"
-                                document.getElementById('poin-text').innerText = currentPoint + '/' + targetPoint;
+            document.getElementById('member_id').value = response.member_id;
+            document.getElementById('is_registered_member').value = 1;
+            
+            // Sembunyikan tombol daftar member
+            document.getElementById('btn-daftar-member').classList.add('hidden');
+            
+            // Update Badge Status
+            const badge = document.getElementById('badge-status');
+            badge.innerText = 'Member';
+            badge.className = 'text-xl font-bold text-pink-500';
 
-                                // Tombol Claim
-                                let btnClaim = document.getElementById('btn-claim');
-                                if (currentPoint >= targetPoint) {
-                                    btnClaim.classList.remove('hidden');
-                                } else {
-                                    btnClaim.classList.add('hidden');
-                                }
+            // --- LOGIKA POIN TARGET 8 (Hanya jalan jika member) ---
+            let currentPoint = response.poin || 0;
+        let targetPoint = response.target || 8;
+            document.getElementById('poin-text').innerText = currentPoint + '/' + targetPoint;
 
-                            } else {
-                                // DATA TIDAK DITEMUKAN (New Customer)
-                                document.getElementById('nama_customer').value = '';
-                                document.getElementById('display_tipe_customer').value = 'New Customer';
-                                document.getElementById('tipe_customer_input').value = 'New Customer';
-                                document.getElementById('poin-text').innerText = '0/8';
-                                document.getElementById('btn-claim').classList.add('hidden');
-                                document.getElementById('badge-status').innerText = 'Baru';
-                                document.getElementById('badge-status').className = 'text-xl font-bold text-blue-500';
-                            }
-                        },
+            let btnClaim = document.getElementById('btn-claim');
+            if (currentPoint >= targetPoint) {
+                btnClaim.classList.remove('hidden');
+            } else {
+                btnClaim.classList.add('hidden');
+            }
+
+        } else {
+            // JIKA REGULAR / BUKAN MEMBER
+            // SEMBUNYIKAN BOX POINT
+            document.getElementById('box-point').classList.add('hidden'); 
+
+            document.getElementById('is_registered_member').value = 0;
+            document.getElementById('badge-status').innerText = 'Baru'; // Atau Regular
+            document.getElementById('badge-status').className = 'text-xl font-bold text-blue-500';
+        }
+
+    } else {
+        // DATA TIDAK DITEMUKAN (New Customer)
+        
+        // SEMBUNYIKAN BOX POINT
+        document.getElementById('box-point').classList.add('hidden'); 
+
+        document.getElementById('nama_customer').value = '';
+        document.getElementById('display_tipe_customer').value = 'New Customer';
+        document.getElementById('tipe_customer_input').value = 'New Customer';
+        
+        // Reset elemen lain
+        document.getElementById('btn-claim').classList.add('hidden');
+        document.getElementById('badge-status').innerText = 'Baru';
+        document.getElementById('badge-status').className = 'text-xl font-bold text-blue-500';
+    }
+},
                         error: function() {
                             console.log('Error checking customer');
                         }
@@ -265,39 +281,111 @@
         
         // --- 3. FUNGSI MODAL MEMBER (Eksisting) ---
         function openMemberModal() {
-            const mainNama = document.querySelector('input[name="nama_customer"]').value;
-            const modalNama = document.getElementById('modalNama');
-            if(modalNama) modalNama.value = mainNama;
+    // --- 1. AMBIL DATA DARI FORM UTAMA (Nama & No HP) ---
+    const mainNama = document.querySelector('input[name="nama_customer"]').value;
+    const mainNoHp = document.getElementById('no_hp').value;
+
+    // Masukkan ke Input di Modal
+    const modalNama = document.getElementById('modalNama');
+    // Cari input no_hp spesifik di dalam form modal
+    const modalNoHp = document.querySelector('#formMemberAjax input[name="no_hp"]'); 
+
+    if(modalNama) modalNama.value = mainNama;
+    if(modalNoHp) modalNoHp.value = mainNoHp; 
+
+    // --- 2. HITUNG TOTAL BELANJA & POIN ---
+    let totalBelanja = 0;
+    // Ambil semua input harga yang ada di form
+    const hargaInputs = document.querySelectorAll('input[name="harga[]"]');
+    
+    hargaInputs.forEach(input => {
+        // Pastikan kita hanya mengambil angka (jaga-jaga jika tipe input diubah)
+        // Jika input kosong, anggap 0
+        let rawVal = input.value;
+        let val = parseInt(rawVal) || 0;
+        totalBelanja += val;
+    });
+
+    // Rumus Poin: 1 Poin setiap kelipatan Rp 50.000
+    let poinDidapat = Math.floor(totalBelanja / 50000);
+
+    // --- 3. UPDATE TAMPILAN DI MODAL ---
+    if(document.getElementById('modalTotalDisplay')) {
+            // Tampilkan format Rupiah (misal: Rp 150.000)
+            document.getElementById('modalTotalDisplay').value = "Rp " + totalBelanja.toLocaleString('id-ID');
             
-            // Hitung Total Belanja
-            let totalBelanja = 0;
-            const hargaInputs = document.querySelectorAll('input[name="harga[]"]');
-            hargaInputs.forEach(input => {
-                let val = parseInt(input.value) || 0;
-                totalBelanja += val;
-            });
+            // Isi input hidden untuk dikirim ke controller
+            document.getElementById('modalTotalValue').value = totalBelanja;
+            
+            // Isi input Poin
+            document.getElementById('modalPoin').value = poinDidapat;
+    }
 
-            // Hitung Poin (1 poin per 50.000)
-            let poinDidapat = Math.floor(totalBelanja / 50000);
+    // --- 4. TAMPILKAN MODAL (ANIMASI) ---
+    const modal = document.getElementById('memberModal');
+    const content = document.getElementById('modalContent');
+    if(modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }, 10);
+    }
+}
 
-            // Masukkan ke Modal
-            if(document.getElementById('modalTotalDisplay')) {
-                 document.getElementById('modalTotalDisplay').value = "Rp " + totalBelanja.toLocaleString('id-ID');
-                 document.getElementById('modalTotalValue').value = totalBelanja;
-                 document.getElementById('modalPoin').value = poinDidapat;
+        function submitMemberAjax(event) {
+    event.preventDefault(); // Mencegah form refresh halaman
+
+    // Ambil data form
+    let form = document.getElementById('formMemberAjax');
+    let formData = new FormData(form);
+
+    // Tambahkan Token CSRF (Wajib di Laravel)
+    formData.append('_token', "{{ csrf_token() }}");
+
+    $.ajax({
+        url: "{{ route('members.store') }}", // Pastikan route ini ada di web.php
+        type: "POST",
+        data: formData,
+        contentType: false, // Wajib false untuk FormData
+        processData: false, // Wajib false untuk FormData
+        beforeSend: function() {
+            // Opsional: Ubah tombol jadi 'Loading...'
+            document.getElementById('btnSimpanMember').innerText = 'Menyimpan...';
+        },
+        success: function(response) {
+            // Kembalikan teks tombol
+            document.getElementById('btnSimpanMember').innerText = 'SIMPAN MEMBER';
+
+            if (response.status === 'success') {
+                // 1. Tutup Modal
+                closeMemberModal();
+
+                // 2. Beri Notifikasi Sukses
+                alert(response.message);
+
+                // 3. PENTING: Refresh status customer di halaman Input Order
+                // Kita panggil fungsi cekCustomer() agar UI berubah jadi PINK (Member)
+                // dan kotak Poin muncul otomatis.
+                cekCustomer(); 
+                
+            } else {
+                // Jika error dari logika controller (misal: nomor sudah terdaftar)
+                alert('Gagal: ' + response.message);
             }
-
-            // Tampilkan Modal
-            const modal = document.getElementById('memberModal');
-            const content = document.getElementById('modalContent');
-            if(modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                   content.classList.remove('scale-95');
-                   content.classList.add('scale-100');
-                }, 10);
+        },
+        error: function(xhr) {
+            document.getElementById('btnSimpanMember').innerText = 'SIMPAN MEMBER';
+            
+            // Tangkap error validasi (422) atau server error (500)
+            let errorMessage = 'Terjadi kesalahan sistem.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
             }
+            alert(errorMessage);
         }
+    });
+}
 
         function closeMemberModal() {
             const modal = document.getElementById('memberModal');
@@ -310,6 +398,72 @@
                 if(modal) modal.classList.add('hidden');
             }, 300);
         }
+
+        function claimReward() {
+    // 1. Ambil ID Member dari hidden input
+    let memberId = document.getElementById('member_id').value;
+    
+    if (!memberId) {
+        alert("ID Member tidak ditemukan. Silakan cek ulang nomor HP.");
+        return;
+    }
+
+    // 2. Konfirmasi User
+    if (!confirm("Apakah Anda yakin ingin klaim reward? Poin akan dikurangi.")) {
+        return;
+    }
+
+    // 3. Kirim Request ke Server
+    $.ajax({
+        url: "{{ route('members.claim') }}", // Panggil route yang baru dibuat
+        type: "POST",
+        data: {
+            _token: "{{ csrf_token() }}",
+            member_id: memberId
+        },
+        beforeSend: function() {
+            // Ubah tombol jadi loading
+            let btn = document.getElementById('btn-claim');
+            btn.innerText = 'Processing...';
+            btn.disabled = true;
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                alert(response.message);
+
+                // --- UPDATE TAMPILAN POIN SECARA REALTIME ---
+                let sisaPoin = response.sisa_poin;
+                let target = response.target;
+
+                // Update teks poin (Misal: 2/8)
+                document.getElementById('poin-text').innerText = sisaPoin + '/' + target;
+
+                // Sembunyikan tombol Claim karena poin sudah berkurang
+                let btn = document.getElementById('btn-claim');
+                btn.innerText = 'Claim'; // Reset teks
+                btn.disabled = false;    // Reset disable
+                
+                if (sisaPoin < target) {
+                    btn.classList.add('hidden');
+                }
+
+            } else {
+                alert(response.message);
+                resetBtnClaim();
+            }
+        },
+        error: function(xhr) {
+            alert("Terjadi kesalahan sistem. Coba lagi.");
+            resetBtnClaim();
+        }
+    });
+}
+
+function resetBtnClaim() {
+    let btn = document.getElementById('btn-claim');
+    btn.innerText = 'Claim';
+    btn.disabled = false;
+}
     </script>
 
     <style>
