@@ -323,11 +323,11 @@
     @include('components.member-modal')
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-    // --- 1. AMBIL DATA DARI DATABASE (Via Controller) ---
+<script>
+    // --- 1. SETUP DATA TREATMENT ---
     const rawTreatments = @json($treatments ?? []);
-
-    // Mapping data
+    
+    // Mapping data agar sesuai format JS
     const treatments = rawTreatments.map(item => {
         return {
             name: item.nama_treatment, 
@@ -337,12 +337,12 @@
 
     let activeTreatmentInput = null; 
 
-    // --- INIT LIST SAAT LOAD ---
+    // Saat halaman selesai di-load
     document.addEventListener("DOMContentLoaded", () => {
         renderTreatments(treatments);
     });
 
-    // --- FUNGSI TAMPILKAN LIST (RENDER) ---
+    // --- 2. LOGIKA MODAL TREATMENT (Vanilla JS) ---
     function renderTreatments(data) {
         const listContainer = document.getElementById('treatment-list');
         listContainer.innerHTML = ''; 
@@ -355,14 +355,10 @@
         data.forEach(item => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            
-            // UPDATE: Menggunakan items-start agar teks panjang rapi di atas
             btn.className = 'flex justify-between items-start w-full px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm text-sm';
             
             let formattedPrice = new Intl.NumberFormat('id-ID').format(item.price);
 
-            // UPDATE: Menghapus 'truncate', menambah 'whitespace-normal text-left flex-1'
-            // agar teks panjang turun ke bawah (wrap) dan terlihat semua.
             btn.innerHTML = `
                 <span class="font-medium text-gray-800 whitespace-normal text-left flex-1 pr-2">${item.name}</span>
                 <span class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded whitespace-nowrap">Rp ${formattedPrice}</span>
@@ -375,8 +371,8 @@
         });
     }
 
-    // --- FUNGSI MODAL TREATMENT ---
-    function openTreatmentModal(element) {
+    // Fungsi Buka Modal Treatment
+    window.openTreatmentModal = function(element) {
         activeTreatmentInput = element; 
         document.getElementById('modal-treatment').classList.remove('hidden');
         document.getElementById('search-treatment').value = ''; 
@@ -386,41 +382,42 @@
         }, 100);
     }
 
-    function closeTreatmentModal() {
+    // Fungsi Tutup Modal Treatment
+    window.closeTreatmentModal = function() {
         document.getElementById('modal-treatment').classList.add('hidden');
         activeTreatmentInput = null;
     }
 
+    // Fungsi Pilih Treatment
     function selectTreatment(item) {
         if (activeTreatmentInput) {
             activeTreatmentInput.value = item.name; 
             
-            // Otomatis isi Harga
+            // Otomatis isi Harga di baris yang sama
             const row = activeTreatmentInput.closest('.item-row');
             const priceInput = row.querySelector('input[name="harga[]"]');
             
             if(priceInput) {
-                priceInput.value = item.price; 
+                priceInput.value = item.price;
+                // Trigger event change agar AlpineJS (jika ada) atau hitungan total terupdate
+                priceInput.dispatchEvent(new Event('input')); 
             }
         }
         closeTreatmentModal();
     }
 
-    function filterTreatments() {
+    // Fungsi Search Treatment
+    window.filterTreatments = function() {
         const keyword = document.getElementById('search-treatment').value.toLowerCase();
         const filtered = treatments.filter(t => t.name.toLowerCase().includes(keyword));
         renderTreatments(filtered);
     }
 
-    // ---------------------------------------------------------
-    // --- CEK CUSTOMER LOGIC (FULL FIX - KONSISTENSI STATUS) ---
-    // ---------------------------------------------------------
-    
+    // --- 3. LOGIKA CUSTOMER & MEMBER (jQuery) ---
     let timeout = null;
 
-    function cekCustomer() {
+    window.cekCustomer = function() {
         let noHp = document.getElementById('no_hp').value;
-        
         document.getElementById('btn-daftar-member').classList.remove('hidden');
 
         clearTimeout(timeout);
@@ -431,22 +428,16 @@
                     type: "POST",
                     data: { _token: "{{ csrf_token() }}", no_hp: noHp },
                     success: function (response) {
-                        
-                        // --- SKENARIO: CUSTOMER DITEMUKAN ---
                         if (response.found) {
-                            // 1. Isi Nama
                             document.getElementById('nama_customer').value = response.nama;
-                            
                             const badge = document.getElementById('badge-status');
 
-                            // Cek Status Member vs Repeat Order
-                            if(response.tipe === 'Member') {
-                                // === MEMBER ===
-                                // Paksa Input jadi 'Member'
-                                document.getElementById('display_tipe_customer').value = 'Member';
-                                document.getElementById('tipe_customer_input').value = 'Member';
+                            // Set Hidden Inputs
+                            document.getElementById('display_tipe_customer').value = response.tipe;
+                            document.getElementById('tipe_customer_input').value = response.tipe;
 
-                                // UI Update
+                            if(response.tipe === 'Member') {
+                                // Logic Member
                                 document.getElementById('box-point').classList.remove('hidden'); 
                                 document.getElementById('member_id').value = response.member_id;
                                 document.getElementById('is_registered_member').value = 1;
@@ -454,40 +445,26 @@
                                 
                                 badge.innerText = 'Member';
                                 badge.className = 'text-xl font-bold text-pink-500';
-
-                                // Update Poin
-                                let currentPoint = response.poin || 0;
-                                let targetPoint = response.target || 8;
-                                document.getElementById('poin-text').innerText = currentPoint + '/' + targetPoint;
-
-                                let btnClaim = document.getElementById('btn-claim');
-                                if (currentPoint >= targetPoint) {
-                                    btnClaim.classList.remove('hidden');
-                                } else {
-                                    btnClaim.classList.add('hidden');
-                                }
+                                
+                                document.getElementById('poin-text').innerText = (response.poin || 0) + '/' + (response.target || 8);
+                                
+                                const btnClaim = document.getElementById('btn-claim');
+                                if (response.bisa_claim) btnClaim.classList.remove('hidden');
+                                else btnClaim.classList.add('hidden');
 
                             } else {
-                                // === REPEAT ORDER (Regular/Bukan Member) ===
-                                // PERBAIKAN: Paksa Input jadi 'Repeat Order' (mengabaikan teks 'Regular' atau lainnya dari DB)
-                                document.getElementById('display_tipe_customer').value = 'Repeat Order';
-                                document.getElementById('tipe_customer_input').value = 'Repeat Order';
-
-                                // UI Update
+                                // Logic Regular / Repeat
                                 document.getElementById('box-point').classList.add('hidden'); 
                                 document.getElementById('is_registered_member').value = 0;
                                 document.getElementById('btn-daftar-member').classList.remove('hidden');
-
-                                badge.innerText = 'Repeat Order'; 
-                                badge.className = 'text-xl font-bold text-green-600'; 
+                                
+                                badge.innerText = 'Repeat Order';
+                                badge.className = 'text-xl font-bold text-green-600';
                             }
-
                         } else {
-                            // --- SKENARIO: CUSTOMER BARU ---
+                            // Logic New Customer
                             document.getElementById('box-point').classList.add('hidden'); 
                             document.getElementById('nama_customer').value = '';
-                            
-                            // Set Tipe Baru
                             document.getElementById('display_tipe_customer').value = 'New Customer';
                             document.getElementById('tipe_customer_input').value = 'New Customer';
                             
@@ -499,17 +476,14 @@
                             document.getElementById('btn-claim').classList.add('hidden');
                             document.getElementById('btn-daftar-member').classList.remove('hidden');
                         }
-                    },
-                    error: function() {
-                        console.log('Error checking customer');
                     }
                 });
             }
         }, 500);
     }
-    
 
-    function adjustJumlah(delta) {
+    // Fungsi Tambah/Kurang Baris Item
+    window.adjustJumlah = function(delta) {
         const input = document.getElementById('inputJumlah');
         const container = document.getElementById('itemsContainer');
         
@@ -533,8 +507,9 @@
             }
         }
     }
-    
-    function openMemberModal() {
+
+    // --- 4. LOGIKA MODAL MEMBER ---
+    window.openMemberModal = function() {
         const mainNama = document.querySelector('input[name="nama_customer"]').value;
         const mainNoHp = document.getElementById('no_hp').value;
 
@@ -544,19 +519,17 @@
         if(modalNama) modalNama.value = mainNama;
         if(modalNoHp) modalNoHp.value = mainNoHp; 
 
+        // Hitung total belanja sementara untuk preview poin
         let totalBelanja = 0;
-        const hargaInputs = document.querySelectorAll('input[name="harga[]"]');
-        
-        hargaInputs.forEach(input => {
-            let rawVal = input.value;
-            let val = parseInt(rawVal) || 0;
+        document.querySelectorAll('input[name="harga[]"]').forEach(input => {
+            let val = parseInt(input.value) || 0;
             totalBelanja += val;
         });
 
         let poinDidapat = Math.floor(totalBelanja / 50000);
 
         if(document.getElementById('modalTotalDisplay')) {
-            document.getElementById('modalTotalDisplay').value = "Rp " + totalBelanja.toLocaleString('id-ID');
+            document.getElementById('modalTotalDisplay').value = "Rp " + new Intl.NumberFormat('id-ID').format(totalBelanja);
             document.getElementById('modalTotalValue').value = totalBelanja;
             document.getElementById('modalPoin').value = poinDidapat;
         }
@@ -569,94 +542,23 @@
                 content.classList.remove('scale-95');
                 content.classList.add('scale-100');
             }, 10);
-        // ... (Script JS tetap sama, tidak perlu diubah) ...
-        // Copy fungsi cekCustomer, adjustJumlah, openMemberModal, closeMemberModal, submitMemberAjax, claimReward dari kode sebelumnya
-        let timeout = null;
-        function cekCustomer() {
-            let noHp = document.getElementById('no_hp').value;
-            document.getElementById('btn-daftar-member').classList.remove('hidden');
-            clearTimeout(timeout);
-            timeout = setTimeout(function () {
-                if(noHp.length >= 4) {
-                    $.ajax({
-                        url: "{{ route('check.customer') }}",
-                        type: "POST",
-                        data: { _token: "{{ csrf_token() }}", no_hp: noHp },
-                        success: function (response) {
-                            if (response.found) {
-                                document.getElementById('nama_customer').value = response.nama;
-                                document.getElementById('display_tipe_customer').value = response.tipe;
-                                document.getElementById('tipe_customer_input').value = response.tipe;
-                                if(response.tipe === 'Member') {
-                                    document.getElementById('box-point').classList.remove('hidden'); 
-                                    document.getElementById('member_id').value = response.member_id;
-                                    document.getElementById('is_registered_member').value = 1;
-                                    document.getElementById('btn-daftar-member').classList.add('hidden');
-                                    document.getElementById('poin-text').innerText = response.poin + '/' + response.target;
-                                    if (response.bisa_claim) document.getElementById('btn-claim').classList.remove('hidden');
-                                    else document.getElementById('btn-claim').classList.add('hidden');
-                                } else {
-                                    document.getElementById('box-point').classList.add('hidden'); 
-                                    document.getElementById('is_registered_member').value = 0;
-                                }
-                            } else {
-                                document.getElementById('box-point').classList.add('hidden'); 
-                                document.getElementById('nama_customer').value = '';
-                                document.getElementById('display_tipe_customer').value = 'New Customer';
-                                document.getElementById('tipe_customer_input').value = 'New Customer';
-                            }
-                        }
-                    });
-                }
-            }, 500);
-        }
-
-        function adjustJumlah(delta) {
-            const input = document.getElementById('inputJumlah');
-            const container = document.getElementById('itemsContainer');
-            let val = parseInt(input.value) + delta;
-            if (val < 1) return;
-            input.value = val;
-            if (delta > 0) {
-                const newRow = container.querySelector('.item-row').cloneNode(true);
-                newRow.querySelectorAll('input').forEach(i => i.value = '');
-                newRow.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
-                container.appendChild(newRow);
-            } else {
-                if (container.children.length > 1) container.removeChild(container.lastElementChild);
-            }
-        }
-        
-        function openMemberModal() {
-            const mainNama = document.querySelector('input[name="nama_customer"]').value;
-            const mainNoHp = document.getElementById('no_hp').value;
-            document.getElementById('modalNama').value = mainNama;
-            document.querySelector('#formMemberAjax input[name="no_hp"]').value = mainNoHp; 
-            
-            let total = 0;
-            document.querySelectorAll('input[name="harga[]"]').forEach(i => total += (parseInt(i.value)||0));
-            if(document.getElementById('modalTotalDisplay')) {
-                document.getElementById('modalTotalDisplay').value = "Rp " + total.toLocaleString('id-ID');
-                document.getElementById('modalTotalValue').value = total;
-                document.getElementById('modalPoin').value = Math.floor(total/50000);
-            }
-            const modal = document.getElementById('memberModal');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('modalContent').classList.remove('scale-95');
-                document.getElementById('modalContent').classList.add('scale-100');
-            }, 10);
-        }
-
-        function closeMemberModal() {
-            const modal = document.getElementById('memberModal');
-            document.getElementById('modalContent').classList.remove('scale-100');
-            document.getElementById('modalContent').classList.add('scale-95');
-            setTimeout(() => { modal.classList.add('hidden'); }, 300);
         }
     }
 
-    function submitMemberAjax(event) {
+    window.closeMemberModal = function() {
+        const modal = document.getElementById('memberModal');
+        const content = document.getElementById('modalContent');
+        
+        if(content) {
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+        }
+        setTimeout(() => { 
+            if(modal) modal.classList.add('hidden'); 
+        }, 300);
+    }
+
+    window.submitMemberAjax = function(event) {
         event.preventDefault(); 
         let form = document.getElementById('formMemberAjax');
         let formData = new FormData(form);
@@ -668,137 +570,47 @@
             data: formData,
             contentType: false, 
             processData: false, 
-            beforeSend: function() {
-                document.getElementById('btnSimpanMember').innerText = 'Menyimpan...';
-            },
             success: function(response) {
-                document.getElementById('btnSimpanMember').innerText = 'SIMPAN MEMBER';
-
                 if (response.status === 'success') {
                     closeMemberModal();
                     alert(response.message);
-                    cekCustomer(); 
+                    cekCustomer(); // Refresh data customer
                 } else {
                     alert('Gagal: ' + response.message);
                 }
             },
             error: function(xhr) {
-                document.getElementById('btnSimpanMember').innerText = 'SIMPAN MEMBER';
-                let errorMessage = 'Terjadi kesalahan sistem.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                alert(errorMessage);
+                alert('Terjadi kesalahan sistem.');
             }
         });
     }
 
-    function closeMemberModal() {
-        const modal = document.getElementById('memberModal');
-        const content = document.getElementById('modalContent');
-        if(content) {
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-        }
-        setTimeout(() => {
-            if(modal) modal.classList.add('hidden');
-        }, 300);
-    }
-
-    function claimReward() {
+    window.claimReward = function() {
         let memberId = document.getElementById('member_id').value;
-        
-        if (!memberId) {
-            alert("ID Member tidak ditemukan. Silakan cek ulang nomor HP.");
-            return;
-        }
-
-        if (!confirm("Apakah Anda yakin ingin klaim reward? Poin akan dikurangi.")) {
-            return;
-        }
+        if (!memberId) return alert("ID Member tidak ditemukan.");
+        if (!confirm("Klaim reward? Poin akan dikurangi.")) return;
 
         $.ajax({
             url: "{{ route('members.claim') }}", 
             type: "POST",
-            data: {
-                _token: "{{ csrf_token() }}",
-                member_id: memberId
-            },
-            beforeSend: function() {
-                let btn = document.getElementById('btn-claim');
-                btn.innerText = 'Processing...';
-                btn.disabled = true;
-            },
+            data: { _token: "{{ csrf_token() }}", member_id: memberId },
             success: function(response) {
+                alert(response.message);
                 if (response.status === 'success') {
-                    alert(response.message);
-                    let sisaPoin = response.sisa_poin;
-                    let target = response.target;
-
-                    document.getElementById('poin-text').innerText = sisaPoin + '/' + target;
-
-                    let btn = document.getElementById('btn-claim');
-                    btn.innerText = 'Claim'; 
-                    btn.disabled = false;    
-                    
-                    if (sisaPoin < target) {
-                        btn.classList.add('hidden');
+                    document.getElementById('poin-text').innerText = response.sisa_poin + '/' + response.target;
+                    // Hide button if points not enough
+                    if(response.sisa_poin < response.target) {
+                        document.getElementById('btn-claim').classList.add('hidden');
                     }
-
-                } else {
-                    alert(response.message);
-                    resetBtnClaim();
                 }
-            },
-            error: function(xhr) {
-                alert("Terjadi kesalahan sistem. Coba lagi.");
-                resetBtnClaim();
             }
         });
     }
-
-    function resetBtnClaim() {
-        let btn = document.getElementById('btn-claim');
-        btn.innerText = 'Claim';
-        btn.disabled = false;
-    }
 </script>
 
-    <style>
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
-        function submitMemberAjax(e) {
-            e.preventDefault(); 
-            let formData = new FormData(document.getElementById('formMemberAjax'));
-            formData.append('_token', "{{ csrf_token() }}");
-            $.ajax({
-                url: "{{ route('members.store') }}",
-                type: "POST",
-                data: formData,
-                contentType: false, processData: false, 
-                success: function(res) {
-                    if (res.status === 'success') {
-                        closeMemberModal();
-                        alert(res.message);
-                        cekCustomer(); 
-                    } else alert(res.message);
-                }
-            });
-        }
-
-        function claimReward() {
-            if (!confirm("Klaim reward?")) return;
-            $.ajax({
-                url: "{{ route('members.claim') }}",
-                type: "POST",
-                data: { _token: "{{ csrf_token() }}", member_id: document.getElementById('member_id').value },
-                success: function(res) {
-                    alert(res.message);
-                    if(res.status==='success') document.getElementById('poin-text').innerText = res.sisa_poin + '/' + res.target;
-                }
-            });
-        }
-    </script>
+<style>
+    .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
     <style>.animate-fade-in { animation: fadeIn 0.3s ease-in-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }</style>
 </x-app-layout>
