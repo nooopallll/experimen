@@ -81,6 +81,21 @@ class OrderController extends Controller
                  $totalHarga = array_sum(array_map(function($h) {
                      return (int) preg_replace('/[^0-9]/', '', $h); 
                  }, $request->harga));
+        // ... Loop Simpan Detail Item (Sama seperti sebelumnya) ...
+        $items = $request->item;
+        for ($i = 0; $i < count($items); $i++) {
+            if (!empty($items[$i])) {
+                $hargaRaw = $request->harga[$i] ?? 0;
+                $hargaBersih = (int) preg_replace('/[^0-9]/', '', $hargaRaw);
+
+                OrderDetail::create([
+                    'order_id' => $order->id,
+                    'nama_barang' => $items[$i],
+                    'layanan' => $request->kategori_treatment[$i] ?? 'General',
+                    'harga' => $hargaBersih,
+                    'estimasi_keluar' => $request->tanggal_keluar[$i] ?? null,
+                    'status' => 'Proses',
+                ]);
             }
 
             // LOGIKA PEMBAYARAN BARU (LEBIH SEDERHANA & KUAT)
