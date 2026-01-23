@@ -2,22 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
-    protected $guarded = [];
+    use HasFactory;
 
-    // Order dimiliki oleh 1 Customer
+    protected $fillable = [
+        'no_invoice',
+        'customer_id',
+        'tgl_masuk',
+        'estimasi_selesai',
+        'total_harga',
+        'paid_amount',        // <--- WAJIB DITAMBAHKAN
+        'status_pembayaran',
+        'metode_pembayaran',  // <--- WAJIB DITAMBAHKAN
+        'status_order',
+        'tipe_customer',
+        'sumber_info',
+        'catatan',
+        'kasir',
+        'wa_sent_1',
+        'wa_sent_2',
+    ];
+
+    // Relasi ke Customer
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
 
-    // Order punya BANYAK Detail Sepatu
-    // Perhatikan: parameter kedua 'order_id' memastikan dia nyambung ke tabel order_details
+    // Relasi ke Order Details
     public function details()
     {
-        return $this->hasMany(OrderDetail::class, 'order_id');
+        return $this->hasMany(OrderDetail::class);
     }
 }

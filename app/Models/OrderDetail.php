@@ -2,13 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderDetail extends Model
 {
-    protected $guarded = [];
-    
-    // Opsional: Jika ingin mengakses data order dari detail
+    use HasFactory;
+
+    protected $fillable = [
+        'order_id',
+        'nama_barang',
+        'layanan',
+        'harga',
+        'tanggal_keluar', // <--- WAJIB DITAMBAHKAN
+        'catatan',        // <--- WAJIB DITAMBAHKAN
+        'status',
+    ];
+
+    // Relasi balik ke Order Utama
     public function order()
     {
         return $this->belongsTo(Order::class);
