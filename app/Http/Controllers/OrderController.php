@@ -115,15 +115,15 @@ class OrderController extends Controller
                     $hargaRaw = $request->harga[$i] ?? 0;
                     $hargaBersih = (int) preg_replace('/[^0-9]/', '', $hargaRaw);
 
-                    OrderDetail::create([
-                        'order_id' => $order->id,
-                        'nama_barang' => $items[$i],
-                        'layanan' => $request->kategori_treatment[$i] ?? 'General',
-                        'harga' => $hargaBersih,
-                        'status' => 'Proses',
-                    ]);
-                }
+                OrderDetail::create([
+                    'order_id' => $order->id,
+                    'nama_barang' => $items[$i],
+                    'layanan' => $request->kategori_treatment[$i] ?? 'General',
+                    'harga' => $hargaBersih,
+                    'status' => 'Proses',
+                ]);
             }
+        }
 
             if ($customer->member) {
                 $customer->member->increment('total_transaksi', $totalHarga);
