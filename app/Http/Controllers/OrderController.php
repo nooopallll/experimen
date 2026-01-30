@@ -61,13 +61,12 @@ class OrderController extends Controller
             DB::beginTransaction();
             
             $order = Order::findOrFail($id);
-            $targetStatus = $request->status; // Status yang dipilih user di dropdown utama
+            $oldStatus = $order->status_order; // Status sebelum diedit
+            $targetStatus = $request->status;  // Status baru dari dropdown
             
-            // 1. Update Data Utama Order
+            // 1. Update Data Utama
             $order->status_order = $targetStatus;
             $order->catatan = $request->catatan; 
-            
-            // Gunakan null coalescing operator (?? null) agar aman jika field kosong
             $order->kasir_keluar = $request->kasir_keluar ?? null;
             
             // 2. Update Nama Customer
@@ -76,7 +75,15 @@ class OrderController extends Controller
                 $order->customer->save();
             }
 
-            // 3. Update Rincian Layanan & Sinkronisasi Status
+            // === LOGIKA CERDAS: TOP-DOWN ===
+            // Kita hanya memaksa ubah semua item jika status UTAMA benar-benar BERUBAH (misal: Proses -> Selesai).
+            // Jika status utama tidak diubah (tetap "Selesai"), kita biarkan user mengatur per item.
+            $statusChanged = ($oldStatus !== $targetStatus);
+            $isFinalStatus = in_array($targetStatus, ['Selesai', 'Diambil', 'Batal']);
+            
+            $shouldForceItems = $statusChanged && $isFinalStatus;
+
+            // 3. Update Rincian Layanan
             if ($request->has('details')) {
                 $totalHargaBaru = 0;
 
@@ -84,43 +91,52 @@ class OrderController extends Controller
                     $detail = OrderDetail::find($detailId);
                     
                     if ($detail && $detail->order_id == $order->id) {
-                        // Update Data Barang/Layanan
+                        // Update Data Barang
                         $detail->nama_barang = $data['nama_barang'] ?? $detail->nama_barang;
                         $detail->layanan = $data['layanan'] ?? $detail->layanan;
                         $detail->estimasi_keluar = $data['estimasi_keluar'] ?? $detail->estimasi_keluar;
                         $detail->harga = (int) ($data['harga'] ?? $detail->harga);
 
-                        // === LOGIKA PRIORITAS STATUS ===
-                        // A. Jika Status Utama di-set "Selesai" atau "Diambil", paksa semua item ikut status utama.
-                        if (in_array($targetStatus, ['Selesai', 'Diambil'])) {
-                            $detail->status = $targetStatus;
-                        } 
-                        // B. Jika Status Utama "Proses" atau lainnya, ikuti status per-item dari input form
-                        else {
-                            $detail->status = $data['status'] ?? $detail->status;
+                        // Cek apakah harus memaksa status item?
+                        if ($shouldForceItems) {
+                            $detail->status = $targetStatus; // Ikuti Status Utama
+                        } else {
+                            $detail->status = $data['status'] ?? $detail->status; // Ikuti Input Per Item
                         }
                         
                         $detail->save();
                         $totalHargaBaru += $detail->harga; 
                     }
                 }
-
-                // Simpan total harga baru
                 $order->total_harga = $totalHargaBaru;
 
-                // === LOGIKA PENGECEKAN TERBALIK (Bottom-Up) ===
-                // Jika user TIDAK memilih "Selesai/Diambil" (misal memilih "Proses"), 
-                // tapi ternyata semua item sudah "Selesai", maka otomatis set Status Utama jadi "Selesai".
-                if (!in_array($targetStatus, ['Selesai', 'Diambil', 'Batal'])) {
-                    $itemBelumSelesai = $order->details()
-                        ->whereNotIn('status', ['Selesai', 'Diambil'])
-                        ->count();
-
-                    if ($itemBelumSelesai == 0) {
-                        $order->status_order = 'Selesai';
-                    } else {
-                        // Jika masih ada item yang belum selesai, pastikan status order tetap Proses
-                        $order->status_order = 'Proses';
+                // === LOGIKA CERDAS: BOTTOM-UP (Auto Status) ===
+                // Cek kondisi item terbaru untuk menentukan status order otomatis
+                
+                // Refresh data item agar mendapat status terbaru yang baru saja disimpan
+                $allItems = $order->details()->get();
+                $totalItem = $allItems->count();
+                
+                if ($totalItem > 0) {
+                    $countDiambil = $allItems->where('status', 'Diambil')->count();
+                    $countSelesaiOrDiambil = $allItems->whereIn('status', ['Selesai', 'Diambil'])->count();
+                    
+                    // Skenario 1: Semua item sudah "Diambil" -> Status Order WAJIB "Diambil"
+                    if ($countDiambil == $totalItem) {
+                        $order->status_order = 'Diambil';
+                    } 
+                    // Skenario 2: Semua item sudah "Selesai" (atau campur Diambil) -> Status Order "Selesai"
+                    elseif ($countSelesaiOrDiambil == $totalItem) {
+                        // Jangan ubah jika user secara eksplisit set ke "Batal"
+                        if ($targetStatus !== 'Batal') {
+                            $order->status_order = 'Selesai';
+                        }
+                    } 
+                    // Skenario 3: Masih ada yang Proses -> Status Order "Proses"
+                    else {
+                        if ($targetStatus !== 'Batal') {
+                            $order->status_order = 'Proses';
+                        }
                     }
                 }
             }
@@ -128,7 +144,7 @@ class OrderController extends Controller
             $order->save();
 
             DB::commit();
-            return back()->with('success', 'Status dan rincian pesanan berhasil diperbarui.');
+            return back()->with('success', 'Status pesanan berhasil diperbarui.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -300,7 +316,16 @@ class OrderController extends Controller
             ->count();
 
         if ($itemBelumSelesai == 0) {
-            $order->status_order = 'Selesai';
+            // Logika Cerdas yang sama: Cek apakah semua "Diambil"?
+            $itemBukanDiambil = $order->details()
+                ->where('status', '!=', 'Diambil')
+                ->count();
+
+            if ($itemBukanDiambil == 0) {
+                $order->status_order = 'Diambil';
+            } else {
+                $order->status_order = 'Selesai';
+            }
         } else {
             $order->status_order = 'Proses';
         }

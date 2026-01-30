@@ -13,7 +13,6 @@
             catatan: '',
             details: []
         },
-        // PERBAIKAN: Parameter 'detailsData' sekarang langsung menerima Object, bukan String
         openModal(id, nama, status, catatan, detailsData) {
             this.form.id = id;
             this.form.actionUrl = '{{ url('/pesanan/update') }}/' + id;
@@ -111,10 +110,10 @@
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 @php
                                     $statusClasses = match($order->status_order) {
-                                        'Selesai' => 'bg-green-50 text-green-700 border-green-200', // Hijau
-                                        'Proses' => 'bg-yellow-50 text-yellow-700 border-yellow-200', // Kuning
-                                        'Diambil' => 'bg-blue-50 text-blue-700 border-blue-200', // [UPDATE] Biru
-                                        'Batal' => 'bg-red-50 text-red-700 border-red-200', // Merah
+                                        'Selesai' => 'bg-green-50 text-green-700 border-green-200',
+                                        'Proses' => 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                                        'Diambil' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                        'Batal' => 'bg-red-50 text-red-700 border-red-200',
                                         default => 'bg-gray-100 text-gray-600 border-gray-200',
                                     };
                                 @endphp
@@ -126,7 +125,7 @@
                             {{-- Tombol Aksi --}}
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <div class="flex items-center justify-center space-x-2">
-                                    {{-- TOMBOL EDIT (PERHATIKAN TANDA KUTIP SATU DI @click='') --}}
+                                    {{-- TOMBOL EDIT --}}
                                     <button 
                                         @click='openModal(
                                             "{{ $order->id }}", 
@@ -171,11 +170,11 @@
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <span class="text-xs font-bold text-blue-500 uppercase">#{{ $header->id }}</span>
-                            <h2 class="font-bold text-gray-800">{{ $header->nama_customer }}</h2>
-                            <p class="text-xs text-gray-500">{{ $header->created_at->format('d M Y, H:i') }}</p>
+                            <span class="text-xs font-bold text-blue-500 uppercase">{{ $order->no_invoice }}</span>
+                            <h2 class="font-bold text-gray-800">{{ $order->customer->nama ?? $order->nama_customer }}</h2>
+                            <p class="text-xs text-gray-500">{{ $order->created_at->format('d M Y, H:i') }}</p>
                         </div>
-                        {{-- [UPDATE] Logika Warna Badge di Mobile --}}
+                        
                         @php
                             $mobileStatusClass = match($order->status_order) {
                                 'Selesai' => 'bg-green-50 text-green-700 border-green-200',
@@ -203,7 +202,8 @@
                                 '{{ $order->id }}', 
                                 '{{ addslashes($order->customer->nama ?? $order->nama_customer) }}', 
                                 '{{ $order->status_order }}', 
-                                '{{ addslashes($order->catatan ?? '') }}'
+                                '{{ addslashes($order->catatan ?? '') }}',
+                                {{ $order->details->toJson() }}
                             )"
                             class="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
                             Edit Data
@@ -292,7 +292,7 @@
                                 </div>
                             </div>
 
-                            {{-- Input Status --}}
+                            {{-- Input Status (DIPERBAIKI DENGAN LOGIKA WARNA DINAMIS) --}}
                             <div class="space-y-1">
                                 <label for="status" class="block text-sm font-semibold text-gray-700">Status Pesanan</label>
                                 <div class="relative rounded-md shadow-sm">
@@ -302,16 +302,22 @@
                                         </svg>
                                     </div>
                                     <select name="status" x-model="form.status" id="status" 
-                                        class="block w-full rounded-xl border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 bg-white transition">
+                                        :class="{
+                                            'bg-green-50 text-green-700 border-green-200': form.status === 'Selesai',
+                                            'bg-blue-50 text-blue-700 border-blue-200': form.status === 'Diambil',
+                                            'bg-yellow-50 text-yellow-700 border-yellow-200': form.status === 'Proses',
+                                            'bg-red-50 text-red-700 border-red-200': form.status === 'Batal',
+                                            'bg-white text-gray-700': !['Selesai', 'Diambil', 'Proses', 'Batal'].includes(form.status)
+                                        }"
+                                        class="block w-full rounded-xl border-gray-300 pl-10 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition font-semibold">
                                         <option value="Pending">Pending</option>
                                         <option value="Proses">Proses</option>
                                         <option value="Selesai">Selesai</option>
-                                        {{-- TAMBAHAN: Opsi Diambil --}}
                                         <option value="Diambil">Diambil</option>
                                         <option value="Batal">Batal</option>
                                     </select>
                                 </div>
-</div>
+                            </div>
 
                             {{-- Rincian Pesanan (Bisa Di-edit Langsung) --}}
                             <div class="space-y-2 col-span-2 pt-2">
@@ -350,10 +356,16 @@
                                                             class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer">
                                                     </td>
 
-                                                    {{-- 4. INPUT STATUS --}}
+                                                    {{-- 4. INPUT STATUS (JUGA DIPERBAIKI WARNANYA) --}}
                                                     <td class="p-2">
                                                         <select :name="'details['+detail.id+'][status]'" x-model="detail.status" 
-                                                            class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer">
+                                                            :class="{
+                                                                'bg-green-50 text-green-700 border-green-200': detail.status === 'Selesai',
+                                                                'bg-blue-50 text-blue-700 border-blue-200': detail.status === 'Diambil',
+                                                                'bg-yellow-50 text-yellow-700 border-yellow-200': detail.status === 'Proses',
+                                                                'bg-gray-50 text-gray-700 border-gray-200': !['Selesai', 'Diambil', 'Proses'].includes(detail.status)
+                                                            }"
+                                                            class="w-full px-3 py-2 rounded-lg text-xs font-semibold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer">
                                                             <option value="Proses">Proses</option>
                                                             <option value="Selesai">Selesai</option>
                                                             <option value="Diambil">Diambil</option>
@@ -386,23 +398,6 @@
                                     </table>
                                 </div>
                             </div>
-            
-            {{-- BARIS TOTAL TAGIHAN OTOMATIS --}}
-            <tfoot class="bg-gray-50/80 border-t border-gray-200">
-                <tr>
-                    <td colspan="4" class="px-4 py-3 text-right text-sm font-bold text-gray-600 uppercase tracking-wider">
-                        Total Tagihan
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <span class="text-lg font-black text-blue-600" 
-                            x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(form.details.reduce((sum, item) => sum + parseInt(item.harga || 0), 0))">
-                        </span>
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
-</div>
 
                             {{-- Input Catatan --}}
                             <div class="space-y-1">
@@ -447,6 +442,10 @@
                 Pilih item di bawah ini untuk diklaim oleh customer (pastikan poin mencukupi).
             </p>
 
+            {{-- 
+               CATATAN: Pastikan variable $treatments dikirim dari Controller 
+               ke view ini agar tidak error.
+            --}}
             <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
                 @if(isset($treatments) && $treatments->count() > 0)
                     <ul class="divide-y divide-gray-200">

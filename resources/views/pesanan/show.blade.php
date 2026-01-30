@@ -97,12 +97,21 @@
                                         <dt class="text-gray-500">Tanggal Masuk</dt>
                                         <dd class="font-semibold text-gray-900">{{ $order->created_at->format('d M Y, H:i') }}</dd>
                                     </div>
+                                    
+                                    {{-- STATUS ORDER (DIPERBAIKI LOGIKA WARNANYA) --}}
                                     <div>
                                         <dt class="text-gray-500">Status Order</dt>
                                         <dd>
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                {{ $order->status_order == 'Selesai' ? 'bg-green-100 text-green-800' : 
-                                                  ($order->status_order == 'Proses' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800') }}">
+                                            @php
+                                                $badgeClass = match($order->status_order) {
+                                                    'Selesai' => 'bg-green-100 text-green-800', // Hijau
+                                                    'Proses' => 'bg-yellow-100 text-yellow-800', // Kuning
+                                                    'Diambil' => 'bg-blue-100 text-blue-800',   // [FIX] Biru
+                                                    'Batal' => 'bg-red-100 text-red-800',       // Merah
+                                                    default => 'bg-gray-100 text-gray-800'      // Abu-abu
+                                                };
+                                            @endphp
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $badgeClass }}">
                                                 {{ $order->status_order }}
                                             </span>
                                         </dd>
@@ -182,7 +191,11 @@
                                                 {{-- KOTAK STATUS --}}
                                                 <td class="p-2">
                                                     <select name="details[{{ $item->id }}][status]" 
-                                                        class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all {{ $item->status == 'Selesai' ? 'text-green-600' : 'text-gray-700' }}">
+                                                        class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all 
+                                                        @if($item->status == 'Proses') text-gray-700
+                                                        @elseif($item->status == 'Selesai') text-gray-700
+                                                        @elseif($item->status == 'Diambil') text-gray-700
+                                                        @else text-gray-700 @endif">
                                                         <option value="Proses" {{ $item->status == 'Proses' ? 'selected' : '' }}>Proses</option>
                                                         <option value="Selesai" {{ $item->status == 'Selesai' ? 'selected' : '' }}>Selesai</option>
                                                         <option value="Diambil" {{ $item->status == 'Diambil' ? 'selected' : '' }}>Diambil</option>
