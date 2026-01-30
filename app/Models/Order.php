@@ -15,14 +15,16 @@ class Order extends Model
         'tgl_masuk',
         'estimasi_selesai',
         'total_harga',
-        'paid_amount',        // <--- WAJIB DITAMBAHKAN
+        'discount',
+        'paid_amount',        
         'status_pembayaran',
-        'metode_pembayaran',  // <--- WAJIB DITAMBAHKAN
+        'metode_pembayaran',  
         'status_order',
         'tipe_customer',
         'sumber_info',
         'catatan',
         'kasir',
+        'kasir_keluar', // <--- WAJIB DITAMBAHKAN DISINI
         'wa_sent_1',
         'wa_sent_2',
     ];

@@ -54,9 +54,9 @@
     @forelse($orders as $order)
         <tr class="border-b border-black hover:bg-gray-50 transition duration-150">
             {{-- No. Invoice --}}
-<td class="p-4 font-bold text-blue-600 text-center align-middle text-sm">
-    {{ $order->no_invoice }}
-</td>
+            <td class="p-4 font-bold text-blue-600 text-center align-middle text-sm">
+                {{ $order->no_invoice }}
+            </td>
             
             {{-- Tanggal --}}
             <td class="p-4 font-bold text-gray-900 align-middle">{{ $order->created_at->format('d/m/Y') }}</td>
@@ -77,7 +77,7 @@
                         </button>
                     </div>
 
-                    {{-- === ISI POPUP === --}}
+                    {{-- === ISI POPUP ITEM (DETAIL) === --}}
                     <div id="modal-{{ $order->id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
                             <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeModal('modal-{{ $order->id }}')"></div>
@@ -107,7 +107,10 @@
                                                 <tr>
                                                     {{-- Nama & Harga --}}
                                                     <td class="px-3 py-3 whitespace-nowrap">
-                                                        <div class="text-sm font-bold text-gray-900">{{ $item->nama_barang }}</div>
+                                                        <div class="text-sm font-bold text-gray-900">
+                                                            {{ $item->nama_barang }}
+                                                            @if($item->klaim) <span class="text-[9px] bg-gray-200 px-1 rounded text-blue-600 font-bold">FREE</span> @endif
+                                                        </div>
                                                         <div class="text-xs text-gray-500">{{ $item->layanan }}</div>
                                                         <div class="text-xs font-mono font-bold text-blue-600">Rp{{ number_format($item->harga, 0, ',', '.') }}</div>
                                                     </td>
@@ -164,14 +167,17 @@
                     </div>
                 @else
                     {{-- JIKA CUMA 1 ITEM: TAMPIL BIASA --}}
-                    <span class="font-bold text-gray-900 text-sm">{{ $order->details->first()->nama_barang }}</span>
+                    <span class="font-bold text-gray-900 text-sm">
+                        {{ $order->details->first()->nama_barang }}
+                        @if($order->details->first()->klaim) <span class="text-[9px] bg-gray-200 px-1 rounded text-blue-600 font-bold">FREE</span> @endif
+                    </span>
                 @endif
             </td>
             
             {{-- TREATMENT --}}
             <td class="p-4 align-middle">
                 @if($order->details->count() > 1)
-                     <span class="text-xs text-blue-500 cursor-pointer hover:underline" onclick="openModal('modal-{{ $order->id }}')">
+                      <span class="text-xs text-blue-500 cursor-pointer hover:underline" onclick="openModal('modal-{{ $order->id }}')">
                         Lihat di Detail
                     </span>
                 @else
@@ -243,7 +249,10 @@
                     <div class="border-t border-dashed border-gray-200 py-3 space-y-2">
                         @foreach($order->details as $detail)
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-800 font-medium">{{ $detail->nama_barang }}</span>
+                                <span class="text-gray-800 font-medium">
+                                    {{ $detail->nama_barang }}
+                                    @if($detail->klaim) <span class="text-[9px] bg-gray-200 px-1 rounded text-blue-600 font-bold">FREE</span> @endif
+                                </span>
                                 <span class="text-gray-500 text-xs">{{ $detail->layanan }}</span>
                             </div>
                         @endforeach
@@ -290,17 +299,206 @@
         <div class="mt-6">
             {{ $orders->withQueryString()->links() }}
         </div>
-
     </div>
 
-<script>
-    function openModal(modalId) {
-        document.getElementById(modalId).classList.remove('hidden');
-    }
+    {{-- ========================================================== --}}
+    {{-- MODAL INVOICE OTOMATIS (POPUP SETELAH INPUT ORDER)         --}}
+    {{-- ========================================================== --}}
+    @if(isset($popupOrder) && $popupOrder)
+        <div id="invoiceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300">
+            
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
+                
+                {{-- Header Modal --}}
+                <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                    <h2 class="text-lg font-bold flex items-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Order Berhasil Disimpan!
+                    </h2>
+                    <a href="{{ route('pesanan.index') }}" class="text-gray-400 hover:text-white focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </a>
+                </div>
 
-    function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
-    }
-</script>
+                {{-- Area Printable --}}
+                <div id="printableArea" class="p-6 text-sm text-gray-800 font-mono leading-relaxed overflow-y-auto">
+                    
+                    {{-- Header Invoice --}}
+                    <div class="text-center mb-6 border-b-2 border-black pb-4">
+                        <div class="flex justify-center mb-2">
+                             <img src="{{ asset('images/logo.png') }}" alt="Logo" class="h-12 w-12 object-cover rounded-full">
+                        </div>
+                        
+                        <h1 class="text-2xl font-extrabold uppercase tracking-widest">SAMSI DIESEL</h1>
+                        <p class="text-xs text-gray-600 font-bold uppercase tracking-wide">Shoe Laundry & Care</p>
+                        <p class="text-[10px] text-gray-500 mt-1">Jl. Kebon Agung, Sleman, Yogyakarta</p>
+                        <p class="text-[10px] text-gray-500">Instagram: @samsidiesel | WA: 0812-3456-7890</p>
+                    </div>
+
+                    <div class="flex justify-between items-end border-b border-black pb-2 mb-2">
+                        <div class="text-xs w-full">
+                            <div class="flex justify-between">
+                                <div><span class="font-bold">CS Masuk:</span> {{ $popupOrder->kasir ?? 'Admin' }}</div>
+                                <div class="text-xl font-black tracking-widest">INVOICE</div>
+                            </div>
+                            @if($popupOrder->kasir_keluar)
+                                <div class="mt-1"><span class="font-bold">CS Keluar:</span> {{ $popupOrder->kasir_keluar }}</div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-start mb-4 text-xs">
+                        <div class="w-1/2 pr-2">
+                            <div class="font-bold mb-1">CUSTOMER:</div>
+                            <div class="uppercase">{{ $popupOrder->customer->nama ?? 'Guest' }}</div>
+                            <div>{{ $popupOrder->customer->no_hp ?? '-' }}</div>
+                        </div>
+                        <div class="w-1/2 pl-2 text-right">
+                            <div class="font-bold mb-1">DETAILS:</div>
+                            <div>No: <strong>{{ $popupOrder->no_invoice }}</strong></div>
+                            <div>Date: {{ \Carbon\Carbon::parse($popupOrder->created_at)->format('d/m/Y') }}</div>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-[10px] border-t border-b border-black mb-4">
+                        <thead>
+                            <tr class="text-left font-bold border-b border-dashed border-gray-400">
+                                <th class="py-2 w-1/4">ITEM</th>
+                                <th class="py-2 w-1/4">CATATAN</th>
+                                <th class="py-2 w-1/6">TREATMENT</th>
+                                <th class="py-2 w-1/6 text-center">KELUAR</th>
+                                <th class="py-2 w-1/6 text-right">HARGA</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-dashed divide-gray-200">
+                            @foreach($popupOrder->details as $detail)
+                            <tr>
+                                <td class="py-2 align-top font-bold">
+                                    {{ $detail->nama_barang }}
+                                    @if($detail->klaim)
+                                        <span class="text-[8px] bg-gray-200 px-1 rounded ml-1 font-bold text-blue-600">FREE</span>
+                                    @endif
+                                </td>
+                                <td class="py-2 align-top italic text-gray-600">
+                                    {{ $detail->catatan ?? '-' }}
+                                </td>
+                                <td class="py-2 align-top">
+                                    {{ $detail->layanan }}
+                                </td>
+                                <td class="py-2 align-top text-center">
+                                    {{ $detail->estimasi_keluar ? \Carbon\Carbon::parse($detail->estimasi_keluar)->format('d/m/Y') : '-' }}
+                                </td>
+                                <td class="py-2 align-top text-right font-bold">
+                                    {{ number_format($detail->harga, 0, ',', '.') }}
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    {{-- === LOGIKA TOTAL & DISKON (UPDATED) === --}}
+                    <div class="flex justify-end mb-6">
+                        <div class="w-2/3 text-right text-xs">
+                            
+                            {{-- SUBTOTAL (Total + Diskon) --}}
+                            @php
+                                $subtotal = $popupOrder->total_harga + ($popupOrder->discount ?? 0);
+                            @endphp
+
+                            <div class="flex justify-between mb-1">
+                                <span class="text-gray-600">Subtotal</span>
+                                <span>Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
+                            </div>
+
+                            {{-- DISKON --}}
+                            <div class="flex justify-between mb-1 {{ ($popupOrder->discount > 0) ? 'text-red-600 font-bold' : 'text-gray-600' }}">
+                                <span>Diskon {{ ($popupOrder->discount > 0) ? 'Member' : '' }}</span>
+                                <span>- Rp {{ number_format($popupOrder->discount ?? 0, 0, ',', '.') }}</span>
+                            </div>
+
+                            <div class="flex justify-between font-bold text-sm border-t border-black pt-1 mt-1">
+                                <span>TOTAL</span>
+                                <span>Rp {{ number_format($popupOrder->total_harga, 0, ',', '.') }}</span>
+                            </div>
+
+                            {{-- PEMBAYARAN --}}
+                            @if($popupOrder->status_pembayaran == 'DP')
+                                <div class="flex justify-between text-gray-600 mt-1 italic">
+                                    <span>Bayar (DP)</span>
+                                    <span>Rp {{ number_format($popupOrder->paid_amount, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="flex justify-between text-red-600 font-bold mt-1">
+                                    <span>Sisa Tagihan</span>
+                                    <span>Rp {{ number_format($popupOrder->total_harga - $popupOrder->paid_amount, 0, ',', '.') }}</span>
+                                </div>
+                            @elseif($popupOrder->status_pembayaran == 'Lunas')
+                                <div class="flex justify-between text-green-600 mt-1 font-bold">
+                                    <span>LUNAS</span>
+                                    <span>via {{ $popupOrder->metode_pembayaran }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-start pt-3 border-t-2 border-dashed border-gray-400 text-[10px] mt-4">
+                        <div class="w-[45%] pr-2 text-left">
+                            <p class="font-bold leading-snug">
+                                "Jika sudah tanggal deadline tetapi belum kami hubungi, mohon WA kami"
+                            </p>
+                            <div class="mt-2 text-[8px] text-gray-500">
+                                <i>*Simpan nota ini sebagai bukti pengambilan</i>
+                            </div>
+                        </div>
+
+                        <div class="w-[55%] pl-2 text-left border-l border-dashed border-gray-300">
+                            <p class="font-bold mb-1 underline">NB:</p>
+                            <ul class="list-disc list-outside ml-3 space-y-0.5 text-[9px] text-gray-700 leading-tight">
+                                <li>Pengambilan barang wajib menyertakan Nota asli.</li>
+                                <li>Komplain maksimal 1x24 jam setelah barang diambil.</li>
+                                <li>Barang tidak diambil lebih dari 1 bulan, kerusakan/kehilangan bukan tanggung jawab kami.</li>
+                                <li>Luntur/susut karena sifat bahan sepatu bukan tanggung jawab kami.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-6 text-[8px] text-gray-400">
+                        -- Terima Kasih --
+                    </div>
+                </div>
+
+                {{-- Footer Modal --}}
+                <div class="bg-gray-100 px-6 py-4 flex justify-end gap-3 shrink-0">
+                    <button onclick="document.getElementById('invoiceModal').remove()" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition">
+                        Tutup
+                    </button>
+                    <button onclick="printInvoice()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium shadow-md transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        Cetak Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function printInvoice() {
+                var printContents = document.getElementById('printableArea').innerHTML;
+                var originalContents = document.body.innerHTML;
+                document.body.innerHTML = printContents;
+                window.print();
+                document.body.innerHTML = originalContents;
+                location.reload(); 
+            }
+        </script>
+    @endif
+
+    <script>
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
 
 </x-app-layout>
