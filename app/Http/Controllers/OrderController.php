@@ -31,6 +31,12 @@ class OrderController extends Controller
         }
 
         $orders = $query->paginate(10);
+
+        // === TAMBAHAN LOGIKA LIVE SEARCH ===
+        if ($request->ajax()) {
+            return view('pesanan.partials.list', compact('orders'))->render();
+        }
+
         return view('pesanan.index', compact('orders')); 
     }
 
