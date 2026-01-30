@@ -14,7 +14,7 @@ class OrderDetail extends Model
         'nama_barang',
         'layanan',
         'harga',
-        'tanggal_keluar', // <--- WAJIB DITAMBAHKAN
+        'estimasi_keluar', // <--- WAJIB DITAMBAHKAN
         'catatan',        // <--- WAJIB DITAMBAHKAN
         'status',
     ];
