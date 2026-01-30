@@ -221,9 +221,20 @@ class OrderController extends Controller
                 $customer->update(['nama' => $request->nama_customer]);
             }
 
-            // 3. Generate Invoice
-            $count = Order::whereDate('created_at', today())->count() + 1;
-            $invoice = 'INV-' . date('Ymd') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+            // === [PERBAIKAN INVOICE MULAI DI SINI] ===
+            
+            // LOGIKA LAMA (Hapus/Komentari ini):
+            // $count = Order::whereDate('created_at', today())->count() + 1;
+            // $invoice = 'INV-' . date('Ymd') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+            // LOGIKA BARU:
+            // 1. Hitung total seluruh order yang pernah ada (Continuous Counter)
+            $count = Order::count() + 1; 
+
+            // 2. Generate Invoice tanpa padding '00' (contoh: INV-20260130-4)
+            $invoice = 'INV-' . date('Ymd') . '-' . $count;
+
+            // === [PERBAIKAN SELESAI] ===
 
             // 4. Hitung Total Harga
             $totalHarga = 0;
@@ -233,6 +244,8 @@ class OrderController extends Controller
                 }, $request->harga));
             }
 
+            // ... (Kode ke bawah tetap sama tidak perlu diubah) ...
+            
             // 5. Logika Pembayaran
             $statusPembayaran = $request->status_pembayaran ?? 'Belum Lunas';
             $metodePembayaran = $request->metode_pembayaran ?? 'Tunai';
@@ -251,7 +264,7 @@ class OrderController extends Controller
 
             // 6. Simpan Order Utama
             $order = Order::create([
-                'no_invoice' => $invoice,
+                'no_invoice' => $invoice, // Invoice baru dipakai di sini
                 'customer_id' => $customer->id,
                 'tgl_masuk' => now(),
                 'total_harga' => $totalHarga,
