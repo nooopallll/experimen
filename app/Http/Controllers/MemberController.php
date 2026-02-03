@@ -72,46 +72,29 @@ class MemberController extends Controller
 
     public function claimPoints(Request $request)
     {
-        try {
-            DB::beginTransaction();
+        // 1. Cari Member berdasarkan ID
+        $member = Member::find($request->member_id);
 
-            $member = Member::find($request->member_id);
-            $order = Order::find($request->order_id);
-
-            if (!$member || !$order) return back()->with('error', 'Data error.');
-            if ($member->poin < 8) return back()->with('error', 'Poin tidak cukup.');
-
-            // Potong Poin
-            $member->decrement('poin', 8);
-
-            $rewardName = $request->reward_item; // 'diskon' atau 'Parfum', dll
-
-            // Cek Jenis Reward
-            if ($rewardName === 'diskon') {
-                // --- KASUS DISKON ---
-                $potongan = 35000;
-                $order->discount = $potongan;
-                $order->total_harga = max(0, $order->total_harga - $potongan);
-                $order->save();
-            } else {
-                // --- KASUS BARANG (PARFUM/DLL) ---
-                OrderDetail::create([
-                    'order_id' => $order->id,
-                    'nama_barang' => $rewardName, // Nama Barang
-                    'layanan' => 'Member Reward',
-                    'harga' => 0, // Gratis
-                    'estimasi_keluar' => now(),
-                    'status' => 'Diambil',
-                    'klaim' => $rewardName // Isi kolom klaim
-                ]);
-            }
-
-            DB::commit();
-            return back()->with('success', "Reward berhasil diklaim!");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error: ' . $e->getMessage());
+        if (!$member) {
+            // UBAH: Gunakan back()->with('error', ...) bukan response()->json()
+            return back()->with('error', 'Member tidak ditemukan.');
         }
+
+        // 2. Tentukan Target Poin (Sesuaikan dengan tampilan Anda, misal 8)
+        $targetPoin = 8; 
+
+        // 3. Cek apakah poin cukup
+        if ($member->poin < $targetPoin) {
+            return back()->with('error', 'Poin belum cukup untuk klaim reward!');
+        }
+
+        // 4. Kurangi Poin
+        $member->decrement('poin', $targetPoin);
+
+        // (Opsional) 5. Simpan data reward ke pesanan
+        // Di sini Anda bisa menambahkan kode untuk mencatat reward yang dipilih ke Order Detail
+
+        // 6. SUKSES: Kembali ke halaman Detail Pesanan
+        return back()->with('success', 'Reward "' . $request->reward_item . '" berhasil diklaim! Poin telah dipotong.');
     }
 }
