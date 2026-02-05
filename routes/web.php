@@ -88,6 +88,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Menggunakan OrderDetailController yang sudah di-use di atas
     Route::patch('/order-details/{id}/status', [OrderDetailController::class, 'updateStatus'])->name('order-details.update-status');
+    // Tambahkan di dalam group middleware ['auth', 'verified']
+    Route::get('/orders/{id}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
 });
 
 require __DIR__.'/auth.php';

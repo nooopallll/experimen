@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Member;
 use App\Models\Treatment;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
@@ -32,7 +33,6 @@ class OrderController extends Controller
 
         $orders = $query->paginate(10);
 
-        // === TAMBAHAN LOGIKA LIVE SEARCH ===
         if ($request->ajax()) {
             return view('pesanan.partials.list', compact('orders'))->render();
         }
@@ -53,7 +53,6 @@ class OrderController extends Controller
 
     /**
      * UPDATE DATA UTAMA & DETAIL PESANAN
-     * (Bagian ini diperbarui untuk sinkronisasi status otomatis)
      */
     public function update(Request $request, $id)
     {
@@ -67,29 +66,22 @@ class OrderController extends Controller
             DB::beginTransaction();
             
             $order = Order::findOrFail($id);
-            $oldStatus = $order->status_order; // Status sebelum diedit
-            $targetStatus = $request->status;  // Status baru dari dropdown
+            $oldStatus = $order->status_order;
+            $targetStatus = $request->status;
             
-            // 1. Update Data Utama
             $order->status_order = $targetStatus;
             $order->catatan = $request->catatan; 
             $order->kasir_keluar = $request->kasir_keluar ?? null;
             
-            // 2. Update Nama Customer
             if ($order->customer) {
                 $order->customer->nama = $request->nama_customer;
                 $order->customer->save();
             }
 
-            // === LOGIKA CERDAS: TOP-DOWN ===
-            // Kita hanya memaksa ubah semua item jika status UTAMA benar-benar BERUBAH (misal: Proses -> Selesai).
-            // Jika status utama tidak diubah (tetap "Selesai"), kita biarkan user mengatur per item.
             $statusChanged = ($oldStatus !== $targetStatus);
             $isFinalStatus = in_array($targetStatus, ['Selesai', 'Diambil', 'Batal']);
-            
             $shouldForceItems = $statusChanged && $isFinalStatus;
 
-            // 3. Update Rincian Layanan
             if ($request->has('details')) {
                 $totalHargaBaru = 0;
 
@@ -97,17 +89,15 @@ class OrderController extends Controller
                     $detail = OrderDetail::find($detailId);
                     
                     if ($detail && $detail->order_id == $order->id) {
-                        // Update Data Barang
                         $detail->nama_barang = $data['nama_barang'] ?? $detail->nama_barang;
                         $detail->layanan = $data['layanan'] ?? $detail->layanan;
                         $detail->estimasi_keluar = $data['estimasi_keluar'] ?? $detail->estimasi_keluar;
                         $detail->harga = (int) ($data['harga'] ?? $detail->harga);
 
-                        // Cek apakah harus memaksa status item?
                         if ($shouldForceItems) {
-                            $detail->status = $targetStatus; // Ikuti Status Utama
+                            $detail->status = $targetStatus;
                         } else {
-                            $detail->status = $data['status'] ?? $detail->status; // Ikuti Input Per Item
+                            $detail->status = $data['status'] ?? $detail->status;
                         }
                         
                         $detail->save();
@@ -116,10 +106,7 @@ class OrderController extends Controller
                 }
                 $order->total_harga = $totalHargaBaru;
 
-                // === LOGIKA CERDAS: BOTTOM-UP (Auto Status) ===
-                // Cek kondisi item terbaru untuk menentukan status order otomatis
-                
-                // Refresh data item agar mendapat status terbaru yang baru saja disimpan
+                // Logika Cerdas: Update Status Order berdasarkan Item
                 $allItems = $order->details()->get();
                 $totalItem = $allItems->count();
                 
@@ -127,19 +114,13 @@ class OrderController extends Controller
                     $countDiambil = $allItems->where('status', 'Diambil')->count();
                     $countSelesaiOrDiambil = $allItems->whereIn('status', ['Selesai', 'Diambil'])->count();
                     
-                    // Skenario 1: Semua item sudah "Diambil" -> Status Order WAJIB "Diambil"
                     if ($countDiambil == $totalItem) {
                         $order->status_order = 'Diambil';
-                    } 
-                    // Skenario 2: Semua item sudah "Selesai" (atau campur Diambil) -> Status Order "Selesai"
-                    elseif ($countSelesaiOrDiambil == $totalItem) {
-                        // Jangan ubah jika user secara eksplisit set ke "Batal"
+                    } elseif ($countSelesaiOrDiambil == $totalItem) {
                         if ($targetStatus !== 'Batal') {
                             $order->status_order = 'Selesai';
                         }
-                    } 
-                    // Skenario 3: Masih ada yang Proses -> Status Order "Proses"
-                    else {
+                    } else {
                         if ($targetStatus !== 'Batal') {
                             $order->status_order = 'Proses';
                         }
@@ -148,7 +129,6 @@ class OrderController extends Controller
             }
 
             $order->save();
-
             DB::commit();
             return back()->with('success', 'Status pesanan berhasil diperbarui.');
 
@@ -159,7 +139,7 @@ class OrderController extends Controller
     }
 
     /**
-     * 2. CEK STATUS CUSTOMER SEBELUM ORDER (Halaman Input)
+     * 2. CEK STATUS CUSTOMER SEBELUM ORDER
      */
     public function check(Request $request)
     {
@@ -196,22 +176,54 @@ class OrderController extends Controller
     }
 
     /**
-     * 3. SIMPAN ORDER (CORE FUNCTION)
+     * 3. SIMPAN ORDER (CORE FUNCTION - DIPERBAIKI)
+     * Menangani JSON Response, Poin, dan Item Kosong
      */
     public function store(Request $request)
     {
-        // 1. Validasi
-        $request->validate([
+        // 1. FILTERISASI MANUAL: Hapus baris item yang kosong sebelum validasi
+        // Ini mencegah error "Field is required" jika user menambah baris tapi tidak mengisinya
+        $rawItems = $request->item ?? [];
+        $rawPrices = $request->harga ?? [];
+        $rawServices = $request->kategori_treatment ?? [];
+        $rawDates = $request->tanggal_keluar ?? [];
+        $rawNotes = $request->catatan ?? [];
+        
+        $validIndexes = [];
+        if(is_array($rawItems)) {
+            foreach($rawItems as $index => $val) {
+                // Hanya proses jika nama barang tidak kosong
+                if(!empty($val)) {
+                    $validIndexes[] = $index;
+                }
+            }
+        }
+
+        // Cek apakah ada minimal 1 item valid
+        if (empty($validIndexes)) {
+            if ($request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Harap isi minimal satu item sepatu.'], 422);
+            }
+            return back()->with('error', 'Harap isi minimal satu item sepatu.');
+        }
+
+        // 2. Validasi Data Utama (Customer)
+        $validator = Validator::make($request->all(), [
             'nama_customer' => 'required',
             'no_hp' => 'required',
-            'item.*' => 'required',
-            'harga.*' => 'required', 
         ]);
+
+        if ($validator->fails()) {
+            if ($request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+            }
+            return back()->withErrors($validator)->withInput();
+        }
 
         try {
             DB::beginTransaction();
 
-            // 2. Simpan/Cari Customer
+            // 3. Handle Customer (Create or Update)
             $customer = Customer::firstOrCreate(
                 ['no_hp' => $request->no_hp],
                 ['nama' => $request->nama_customer]
@@ -221,40 +233,48 @@ class OrderController extends Controller
                 $customer->update(['nama' => $request->nama_customer]);
             }
 
-            // === [PERBAIKAN INVOICE MULAI DI SINI] ===
+            // 4. Logika Klaim Poin (Reward)
+            $discountAmount = 0;
+            $claimNote = "";
             
-            // LOGIKA LAMA (Hapus/Komentari ini):
-            // $count = Order::whereDate('created_at', today())->count() + 1;
-            // $invoice = 'INV-' . date('Ymd') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
-
-            // LOGIKA BARU:
-            // 1. Hitung total seluruh order yang pernah ada (Continuous Counter)
-            $count = Order::count() + 1; 
-
-            // 2. Generate Invoice tanpa padding '00' (contoh: INV-20260130-4)
-            $invoice = 'INV-' . date('Ymd') . '-' . $count;
-
-            // === [PERBAIKAN SELESAI] ===
-
-            // 4. Hitung Total Harga
-            $totalHarga = 0;
-            if (is_array($request->harga)) {
-                $totalHarga = array_sum(array_map(function ($h) {
-                    return (int) preg_replace('/[^0-9]/', '', $h);
-                }, $request->harga));
+            // Cek apakah member eligible dan memilih klaim (Diskon / Parfum)
+            if ($customer->member && $customer->member->poin >= 8 && $request->filled('claim_type')) {
+                if ($request->claim_type === 'diskon') {
+                    $discountAmount = 10000;
+                    $customer->member->decrement('poin', 8); // KURANGI POIN
+                    $claimNote = "[KLAIM DISKON 10rb]";
+                } elseif ($request->claim_type === 'parfum') {
+                    $customer->member->decrement('poin', 8); // KURANGI POIN
+                    $claimNote = "[KLAIM FREE PARFUM]";
+                }
             }
 
-            // ... (Kode ke bawah tetap sama tidak perlu diubah) ...
-            
-            // 5. Logika Pembayaran
+            // 5. Generate Invoice
+            // Hitung total order di database untuk nomor urut
+            $count = Order::count() + 1;
+            // Format: INV-YYYYMMDD-00X
+            $invoice = 'INV-' . date('Ymd') . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+
+            // 6. Hitung Total Harga (Hanya dari item yang valid)
+            $totalHarga = 0;
+            foreach ($validIndexes as $i) {
+                $h = $rawPrices[$i] ?? 0;
+                // Bersihkan format Rupiah (titik/koma) jadi integer
+                $totalHarga += (int) preg_replace('/[^0-9]/', '', $h);
+            }
+
+            // Kurangi dengan diskon (jika ada)
+            $finalTotal = $totalHarga - $discountAmount;
+
+            // 7. Tentukan Status Pembayaran
             $statusPembayaran = $request->status_pembayaran ?? 'Belum Lunas';
             $metodePembayaran = $request->metode_pembayaran ?? 'Tunai';
-            
             $inputPaidAmount = $request->paid_amount ? (int) preg_replace('/[^0-9]/', '', $request->paid_amount) : 0;
             
             $jumlahBayar = 0;
             if ($statusPembayaran == 'Lunas') {
-                $jumlahBayar = ($inputPaidAmount > 0) ? $inputPaidAmount : $totalHarga;
+                // Jika lunas, bayar full atau sesuai input user jika lebih besar
+                $jumlahBayar = ($inputPaidAmount > 0) ? $inputPaidAmount : $finalTotal;
             } elseif ($statusPembayaran == 'DP') {
                 $jumlahBayar = $inputPaidAmount;
             } else {
@@ -262,44 +282,37 @@ class OrderController extends Controller
                 $metodePembayaran = null; 
             }
 
-            // 6. Simpan Order Utama
+            // 8. Simpan Data Order Utama
             $order = Order::create([
-                'no_invoice' => $invoice, // Invoice baru dipakai di sini
+                'no_invoice' => $invoice,
                 'customer_id' => $customer->id,
                 'tgl_masuk' => now(),
-                'total_harga' => $totalHarga,
+                'total_harga' => $finalTotal,
                 'paid_amount' => $jumlahBayar,
                 'metode_pembayaran' => $metodePembayaran,
                 'status_pembayaran' => $statusPembayaran,
                 'status_order' => 'Proses',
                 'tipe_customer' => $request->tipe_customer,
                 'sumber_info' => $request->sumber_info,
-                'catatan' => $request->catatan[0] ?? '-',
+                // Gabungkan catatan klaim reward dengan catatan customer (ambil catatan baris pertama sebagai perwakilan)
+                'catatan' => trim($claimNote . " " . ($rawNotes[0] ?? '-')),
                 'kasir' => $request->cs ?? 'Admin',
             ]);
 
-            // 7. Simpan Detail Item
-            $items = $request->item;
-            if (is_array($items)) {
-                for ($i = 0; $i < count($items); $i++) {
-                    if (!empty($items[$i])) {
-                        $hargaRaw = $request->harga[$i] ?? 0;
-                        $hargaBersih = (int) preg_replace('/[^0-9]/', '', $hargaRaw);
-
-                        OrderDetail::create([
-                            'order_id' => $order->id,
-                            'nama_barang' => $items[$i],
-                            'layanan' => $request->kategori_treatment[$i] ?? 'General',
-                            'harga' => $hargaBersih,
-                            'estimasi_keluar' => $request->tanggal_keluar[$i] ?? null,
-                            'catatan' => $request->catatan[$i] ?? null,
-                            'status' => 'Proses',
-                        ]);
-                    }
-                }
+            // 9. Simpan Detail Item (Looping index valid)
+            foreach ($validIndexes as $i) {
+                OrderDetail::create([
+                    'order_id' => $order->id,
+                    'nama_barang' => $rawItems[$i],
+                    'layanan' => $rawServices[$i] ?? 'General',
+                    'harga' => (int) preg_replace('/[^0-9]/', '', $rawPrices[$i]),
+                    'estimasi_keluar' => $rawDates[$i] ?? null,
+                    'catatan' => $rawNotes[$i] ?? null,
+                    'status' => 'Proses',
+                ]);
             }
 
-            // 8. Update Poin Member
+            // 10. Tambah Poin Transaksi Baru (1 Poin per 50rb)
             if ($customer->member) {
                 $customer->member->increment('total_transaksi', $totalHarga);
                 $poinBaru = floor($totalHarga / 50000);
@@ -309,12 +322,39 @@ class OrderController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('pesanan.index')->with('success', 'Order berhasil! ' . $invoice);
+
+            // === RESPON JSON UNTUK AJAX (POPUP INVOICE) ===
+            if ($request->ajax()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Order berhasil disimpan!',
+                    // Load relasi agar data customer & detail muncul di Invoice JS
+                    'order' => $order->load('customer', 'details'),
+                    'discount_amount' => $discountAmount,
+                    'original_total' => $totalHarga
+                ]);
+            }
+
+            // Fallback jika submit biasa (non-ajax)
+            return redirect()->route('orders.invoice', $order->id)->with('success', 'Order berhasil!');
 
         } catch (\Exception $e) {
             DB::rollBack();
+            // Respon error JSON jika AJAX
+            if ($request->ajax()) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            }
             return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
         }
+    }
+
+    /**
+     * MENAMPILKAN HALAMAN INVOICE (NON-POPUP / Direct Link)
+     */
+    public function invoice($id)
+    {
+        $order = Order::with(['customer', 'details'])->findOrFail($id);
+        return view('orders.invoice', compact('order'));
     }
 
     /**
@@ -329,13 +369,13 @@ class OrderController extends Controller
             $detail->save();
         }
 
+        // Cek status keseluruhan order (Smart Status Update)
         $order = $detail->order;
         $itemBelumSelesai = $order->details()
             ->whereNotIn('status', ['Selesai', 'Diambil'])
             ->count();
 
         if ($itemBelumSelesai == 0) {
-            // Logika Cerdas yang sama: Cek apakah semua "Diambil"?
             $itemBukanDiambil = $order->details()
                 ->where('status', '!=', 'Diambil')
                 ->count();
@@ -355,7 +395,7 @@ class OrderController extends Controller
     }
 
     /**
-     * FUNGSI TOGGLE WA
+     * FUNGSI TOGGLE WA MARKER
      */
     public function toggleWa($id, $type)
     {
@@ -372,7 +412,7 @@ class OrderController extends Controller
     }
 
     /**
-     * FUNGSI AJAX CEK CUSTOMER
+     * FUNGSI AJAX CEK CUSTOMER & POIN
      */
     public function checkCustomer(Request $request)
     {
