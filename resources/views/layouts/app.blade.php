@@ -60,6 +60,11 @@
             Kebutuhan
         </a>
 
+<a href="{{ route('owner.treatments.index') }}" 
+   class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.treatments.*') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
+    Manajemen Treatment
+</a>
+
         <a href="{{ route('owner.karyawan.index') }}" 
            class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.karyawan.index') ? 'bg-white/20 font-semibold text-white' : 'hover:bg-white/10' }}">
             Manajemen Karyawan

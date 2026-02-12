@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderDetailController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KebutuhanController;
 use App\Http\Controllers\KaryawanController;
+use App\Http\Controllers\TreatmentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -113,6 +114,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/owner/karyawan', [KaryawanController::class, 'store'])->name('owner.karyawan.store');
     Route::put('/owner/karyawan/{id}', [KaryawanController::class, 'update'])->name('owner.karyawan.update');
     Route::delete('/owner/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('owner.karyawan.destroy');    
-});
+
+    Route::get('/owner/treatments', [TreatmentController::class, 'index'])->name('owner.treatments.index');
+    Route::post('/owner/treatments', [TreatmentController::class, 'store'])->name('owner.treatments.store');
+    Route::put('/owner/treatments/{id}', [TreatmentController::class, 'update'])->name('owner.treatments.update');
+    Route::delete('/owner/treatments/{id}', [TreatmentController::class, 'destroy'])->name('owner.treatments.destroy');
+    });
 
 require __DIR__.'/auth.php';

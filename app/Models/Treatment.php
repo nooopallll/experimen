@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class Treatment extends Model
 {
-    protected $guarded = []; // Izinkan semua kolom diisi
+    protected $fillable = ['kategori', 'nama_treatment', 'harga'];
 }
