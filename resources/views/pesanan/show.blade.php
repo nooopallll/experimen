@@ -119,10 +119,9 @@
                                         <dt class="text-gray-500 font-bold mb-1">CS Keluar (Penyerah)</dt>
                                         <dd>
                                             <select name="kasir_keluar" id="kasir_keluar" class="w-full text-sm border-gray-300 rounded-lg focus:ring-blue-500 cursor-pointer">
-                                                <option value="">- Pilih CS -</option>
-                                                <option value="Admin 1" {{ ($order->kasir_keluar ?? '') == 'Admin 1' ? 'selected' : '' }}>Admin 1</option>
-                                                <option value="Admin 2" {{ ($order->kasir_keluar ?? '') == 'Admin 2' ? 'selected' : '' }}>Admin 2</option>
-                                                <option value="CS Naufal" {{ ($order->kasir_keluar ?? '') == 'CS Naufal' ? 'selected' : '' }}>CS Naufal</option>
+                                                @foreach($karyawans as $k)
+        <option value="{{ $k->nama_karyawan }}">{{ $k->nama_karyawan }}</option>
+    @endforeach
                                             </select>
                                         </dd>
                                     </div>

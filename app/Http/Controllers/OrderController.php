@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Customer;
 use App\Models\Member;
+use App\Models\Karyawan;
 use App\Models\Treatment;
 use App\Models\PointHistory; 
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,8 @@ class OrderController extends Controller
     {
         $order = Order::with(['customer.member', 'details'])->findOrFail($id);
         $treatments = Treatment::orderBy('nama_treatment', 'asc')->get();
-        return view('pesanan.show', compact('order', 'treatments'));
+        $karyawans = Karyawan::orderBy('nama_karyawan', 'asc')->get();
+        return view('pesanan.show', compact('order', 'treatments', 'karyawans'));
     }
 
     /**
@@ -90,7 +92,6 @@ class OrderController extends Controller
             // --- B. UPDATE ORDER HEADER ---
             $order->update([
                 'nama_customer'     => $request->nama_customer, 
-                // Status order diupdate manual dulu, nanti ditimpa logika otomatis di bawah
                 'status_order'      => $request->status, 
                 'kasir_keluar'      => $request->kasir_keluar, 
                 'catatan'           => $request->catatan,
@@ -131,32 +132,20 @@ class OrderController extends Controller
                 $order->save();
             }
 
-            // --- D. LOGIKA OTOMATIS STATUS ORDER (BARU DITAMBAHKAN) ---
-            // Cek status semua item untuk menentukan status global
+            // --- D. LOGIKA OTOMATIS STATUS ORDER ---
             $totalDetails = $order->details()->count();
-            
-            // Hitung item yang BELUM selesai (Masih Proses/Baru)
-            $unfinishedItems = $order->details()
-                                     ->whereNotIn('status', ['Selesai', 'Diambil'])
-                                     ->count();
-            
-            // Hitung item yang SUDAH diambil
-            $pickedUpItems = $order->details()
-                                   ->where('status', 'Diambil')
-                                   ->count();
+            $unfinishedItems = $order->details()->whereNotIn('status', ['Selesai', 'Diambil'])->count();
+            $pickedUpItems = $order->details()->where('status', 'Diambil')->count();
 
             if ($totalDetails > 0) {
                 if ($unfinishedItems > 0) {
-                    // Jika ada 1 saja yang belum selesai -> Status Global = PROSES
                     $order->status_order = 'Proses';
                 } elseif ($pickedUpItems == $totalDetails) {
-                    // Jika SEMUA item sudah diambil -> Status Global = DIAMBIL
                     $order->status_order = 'Diambil';
                 } else {
-                    // Jika tidak ada yang pending, tapi belum semua diambil (Berarti Selesai semua/sebagian) -> SELESAI
                     $order->status_order = 'Selesai';
                 }
-                $order->save(); // Simpan perubahan status otomatis
+                $order->save(); 
             }
 
             DB::commit();
@@ -184,7 +173,7 @@ class OrderController extends Controller
     }
 
     /**
-     * 4. SIMPAN ORDER BARU
+     * 4. SIMPAN ORDER BARU (STORE)
      */
     public function store(Request $request)
     {
@@ -204,14 +193,32 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
-            $customer = Customer::firstOrCreate(
-                ['no_hp' => $request->no_hp],
-                ['nama' => $request->nama_customer]
-            );
-            if($customer->nama !== $request->nama_customer) {
-                $customer->update(['nama' => $request->nama_customer]);
+            // 1. CEK STATUS EXISTING (Untuk tabel orders -> Status Transaksi)
+            $existingCustomer = Customer::where('no_hp', $request->no_hp)->first();
+            $statusOrder = 'New Customer';
+            
+            if ($existingCustomer) {
+                $statusOrder = $existingCustomer->member ? 'Member' : 'Repeat Order';
             }
 
+            // 2. CREATE/UPDATE CUSTOMER (Data Profil)
+            // PERBAIKAN: Hanya update 'tipe' jika user mengisinya.
+            $customerData = [
+                'nama' => $request->nama_customer,
+                'sumber_info' => $request->sumber_info
+            ];
+
+            // Jika form tipe diisi, update database. Jika kosong, biarkan data lama.
+            if (!empty($request->tipe_customer)) {
+                $customerData['tipe'] = $request->tipe_customer;
+            }
+
+            $customer = Customer::updateOrCreate(
+                ['no_hp' => $request->no_hp],
+                $customerData
+            );
+
+            // --- LOGIKA DISKON MEMBER ---
             $staticDiscount = 0;
             $klaimColumnValue = null; 
             $isRedeeming = false;
@@ -236,6 +243,7 @@ class OrderController extends Controller
             }
             $finalTotal = $subtotalItem - $staticDiscount;
 
+            // --- PEMBAYARAN ---
             $statusPembayaran = $request->status_pembayaran ?? 'Belum Lunas';
             $metodePembayaran = $request->metode_pembayaran ?? 'Tunai';
             $inputPaidAmount = $request->paid_amount ? (int) preg_replace('/[^0-9]/', '', $request->paid_amount) : 0;
@@ -250,6 +258,7 @@ class OrderController extends Controller
                 $metodePembayaran = null; 
             }
 
+            // 3. CREATE ORDER
             $order = Order::create([
                 'no_invoice'        => $invoice,
                 'customer_id'       => $customer->id,
@@ -260,8 +269,7 @@ class OrderController extends Controller
                 'metode_pembayaran' => $metodePembayaran,
                 'status_pembayaran' => $statusPembayaran,
                 'status_order'      => 'Proses',
-                'tipe_customer'     => $request->tipe_customer,
-                'sumber_info'       => $request->sumber_info,
+                'tipe_customer'     => $statusOrder, // <--- New/Repeat/Member
                 'catatan'           => $request->catatan[$validIndexes[0]] ?? '-', 
                 'kasir'             => $request->cs ?? 'Admin',
             ]);
@@ -334,7 +342,8 @@ class OrderController extends Controller
     {
         $customer = Customer::where('no_hp', $request->no_hp)->with('member')->first();
         $treatments = Treatment::orderBy('nama_treatment', 'asc')->get(); 
-
+        $karyawans = Karyawan::orderBy('nama_karyawan', 'asc')->get();
+        
         $data = [
             'no_hp' => $request->no_hp,
             'customer' => null,
@@ -342,7 +351,8 @@ class OrderController extends Controller
             'color' => 'text-blue-500 bg-blue-50 border-blue-200',
             'is_member' => false,
             'poin' => 0,
-            'treatments' => $treatments 
+            'treatments' => $treatments,
+            'karyawans' => $karyawans 
         ];
 
         if ($customer) {
@@ -365,12 +375,22 @@ class OrderController extends Controller
     public function checkCustomer(Request $request)
     {
         $customer = Customer::with('member')->where('no_hp', $request->no_hp)->first();
+        
         if ($customer) {
             $poin = $customer->member ? $customer->member->poin : 0;
+            
+            // 1. Badge Status (Untuk Header: Member / Repeat Order)
+            $badge = $customer->member ? 'Member' : 'Repeat Order';
+
+            // 2. Data Form (Murni dari Database)
+            $tipeForm = $customer->tipe; // JANGAN PAKE '??' agar tidak menimpa data NULL
+
             return response()->json([
                 'found' => true,
                 'nama' => $customer->nama,
-                'tipe' => $customer->member ? 'Member' : 'Repeat Order',
+                'badge' => $badge,        
+                'tipe_form' => $tipeForm, // Murni data DB
+                'sumber_info' => $customer->sumber_info,
                 'poin' => $poin,
                 'target' => 8,
                 'bisa_claim' => $poin >= 8,
@@ -386,10 +406,6 @@ class OrderController extends Controller
         return view('orders.invoice', compact('order'));
     }
 
-    /**
-     * UPDATE STATUS PER ITEM (Biasanya via Toggle/AJAX Cepat)
-     * Juga memicu perhitungan ulang status global
-     */
     public function updateDetail(Request $request, $id)
     {
         $detail = OrderDetail::findOrFail($id);
@@ -399,7 +415,6 @@ class OrderController extends Controller
             $detail->save();
         }
 
-        // --- LOGIKA STATUS OTOMATIS (Sama dengan update main) ---
         $order = $detail->order;
         $totalDetails = $order->details()->count();
         $unfinishedItems = $order->details()->whereNotIn('status', ['Selesai', 'Diambil'])->count();

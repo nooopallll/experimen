@@ -4,7 +4,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MemberController; 
 use App\Http\Controllers\OrderDetailController; 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KebutuhanController;
+use App\Http\Controllers\KaryawanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +23,10 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', function () {
+        // Jika owner nyasar ke sini, lempar ke dashboard owner
+        if (auth()->user()->role === 'owner') {
+            return redirect()->route('owner.dashboard');
+        }
         return view('cek-customer');
     })->name('dashboard');
 
@@ -73,7 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route ini untuk update status per-item (detail sepatu)
     Route::post('/pesanan/detail/{id}/update', [OrderController::class, 'updateDetail'])->name('pesanan.detail.update');
 
-    Route::post('/check-customer', [OrderController::class, 'checkCustomer'])->name('check.customer');
+    Route::get('/check-customer', [OrderController::class, 'checkCustomer'])->name('check.customer');
 
     // ==========================================
     // LAIN-LAIN
@@ -94,6 +100,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/kebutuhan', [KebutuhanController::class, 'index'])->name('kebutuhan.index');
     Route::post('/kebutuhan/store', [KebutuhanController::class, 'store'])->name('kebutuhan.store');
+
+    Route::get('/owner/dashboard', [DashboardController::class, 'index'])
+        ->name('owner.dashboard');
+
+    Route::get('/owner/kebutuhan', [KebutuhanController::class, 'ownerIndex'])->name('owner.kebutuhan');
+
+    // Route untuk aksi centang (Hapus)
+    Route::delete('/owner/kebutuhan/{id}', [KebutuhanController::class, 'markAsPurchased'])->name('owner.kebutuhan.done');
+   
+    Route::get('/owner/karyawan', [KaryawanController::class, 'index'])->name('owner.karyawan.index');
+    Route::post('/owner/karyawan', [KaryawanController::class, 'store'])->name('owner.karyawan.store');
+    Route::put('/owner/karyawan/{id}', [KaryawanController::class, 'update'])->name('owner.karyawan.update');
+    Route::delete('/owner/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('owner.karyawan.destroy');    
 });
 
 require __DIR__.'/auth.php';

@@ -6,8 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    protected $guarded = [];
-
+    protected $fillable = [
+    'nama', 
+    'no_hp', 
+    'tipe',       // <--- Gunakan 'tipe' sesuai database Anda
+    'alamat',     // (Opsional, jika mau diisi)
+    'sumber_info' // <--- Kolom baru
+];
     // Relasi: Customer mungkin punya 1 data Member
     public function member()
     {

@@ -106,22 +106,22 @@
                 rows: [],
                 
                 init() {
-                    // AMBIL DATA DARI DATABASE
-                    const existingData = @json($kebutuhans);
+    // Memastikan data dari PHP masuk ke variabel JS
+    const existingData = @json($kebutuhans);
 
-                    if (existingData.length > 0) {
-                        this.rows = existingData.map(item => ({
-                            id: Date.now() + Math.random(), 
-                            db_id: item.id,                
-                            nama: item.nama,
-                            tanggal: item.tanggal,
-                            stok: item.stok,
-                            saved: true 
-                        }));
-                    } else {
-                        this.addRow();
-                    }
-                },
+    if (existingData && existingData.length > 0) {
+        this.rows = existingData.map(item => ({
+            id: 'db-' + item.id, // ID unik untuk Alpine
+            db_id: item.id,      // ID asli database untuk keperluan update/save
+            nama: item.nama,     // Mengambil dari kunci 'nama' di Controller
+            tanggal: item.tanggal,
+            stok: item.stok,     // Mengambil dari kunci 'stok' di Controller
+            saved: true          // Menandakan baris ini data lama (readonly)
+        }));
+    } else {
+        this.addRow(); // Jika benar-benar kosong, baru tambah baris baru
+    }
+},
 
                 getTodayDate() {
                     const today = new Date();
