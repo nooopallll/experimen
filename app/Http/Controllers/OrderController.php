@@ -10,6 +10,7 @@ use App\Models\Member;
 use App\Models\Karyawan;
 use App\Models\Treatment;
 use App\Models\PointHistory; 
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -48,7 +49,8 @@ class OrderController extends Controller
         $order = Order::with(['customer.member', 'details'])->findOrFail($id);
         $treatments = Treatment::orderBy('nama_treatment', 'asc')->get();
         $karyawans = Karyawan::orderBy('nama_karyawan', 'asc')->get();
-        return view('pesanan.show', compact('order', 'treatments', 'karyawans'));
+        $nominalDiskon = Setting::getDiskonMember();
+        return view('pesanan.show', compact('order', 'treatments', 'karyawans', 'nominalDiskon'));
     }
 
     /**
@@ -87,7 +89,7 @@ class OrderController extends Controller
                     ]);
                 }
             }
-            $staticDiscount = ($klaimStatus === 'Diskon') ? 10000 : 0;
+            $staticDiscount = ($klaimStatus === 'Diskon') ? Setting::getDiskonMember() : 0;
 
             // --- B. UPDATE ORDER HEADER ---
             $order->update([
@@ -224,7 +226,7 @@ class OrderController extends Controller
 
             if ($customer->member && $customer->member->poin >= 8 && $request->filled('claim_type')) {
                 if ($request->claim_type === 'diskon') {
-                    $staticDiscount = 10000;
+                    $staticDiscount = Setting::getDiskonMember();
                     $klaimColumnValue = 'Diskon'; 
                     $isRedeeming = true;
                 } elseif ($request->claim_type === 'parfum') {
@@ -342,6 +344,7 @@ class OrderController extends Controller
         $customer = Customer::where('no_hp', $request->no_hp)->with('member')->first();
         $treatments = Treatment::orderBy('nama_treatment', 'asc')->get(); 
         $karyawans = Karyawan::orderBy('nama_karyawan', 'asc')->get();
+        $nominalDiskon = Setting::getDiskonMember(); // Ambil dari database
         
         $data = [
             'no_hp' => $request->no_hp,
@@ -352,7 +355,8 @@ class OrderController extends Controller
             'is_member' => false,
             'poin' => 0,
             'treatments' => $treatments,
-            'karyawans' => $karyawans 
+            'karyawans' => $karyawans,
+            'nominal_diskon' => $nominalDiskon // Kirim ke view
         ];
 
         if ($customer) {

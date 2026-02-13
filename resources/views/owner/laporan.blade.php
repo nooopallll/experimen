@@ -151,7 +151,7 @@
                     </div>
 
                     {{-- Modal Body --}}
-                    <form action="{{ route('owner.laporan') }}" method="GET" class="p-6 space-y-4">
+                    <form id="filterForm" action="{{ route('owner.laporan') }}" method="GET" class="p-6 space-y-4">
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {{-- Tanggal Masuk --}}
@@ -212,11 +212,17 @@
                         </div>
 
                         {{-- Footer Buttons --}}
-                        <div class="flex justify-end pt-4 border-t border-gray-100">
-                            <button type="button" @click="showFilterModal = false" class="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition mr-2">Batal</button>
-                            <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg transition transform hover:scale-105">
-                                Tampilkan
+                        <div class="flex justify-between pt-4 border-t border-gray-100">
+                            <button type="button" onclick="clearFilterForm()" class="px-5 py-2 text-red-500 font-bold hover:bg-red-50 rounded-lg transition flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                Reset
                             </button>
+                            <div class="flex gap-2">
+                                <button type="button" @click="showFilterModal = false" class="px-5 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg transition">Batal</button>
+                                <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg transition transform hover:scale-105">
+                                    Tampilkan
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -232,6 +238,14 @@
             var wb = XLSX.utils.table_to_book(table, { sheet: "Laporan" });
             // Simpan file dengan nama Laporan_Pendapatan.xlsx
             XLSX.writeFile(wb, "Laporan_Pendapatan.xlsx");
+        }
+
+        function clearFilterForm() {
+            const form = document.getElementById('filterForm');
+            // Reset semua input text, number, date, select menjadi kosong
+            form.querySelectorAll('input:not([type=checkbox]):not([type=radio]), select').forEach(el => el.value = '');
+            // Uncheck checkbox
+            form.querySelectorAll('input[type=checkbox], input[type=radio]').forEach(el => el.checked = false);
         }
     </script>
 </x-app-layout>

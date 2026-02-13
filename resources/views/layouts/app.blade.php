@@ -70,6 +70,10 @@
                             Laporan Pendapatan
                         </a>
 
+                        <a href="{{ route('owner.settings.index') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.settings.index') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
+                            Manajemen Diskon
+                        </a>
+
  <a href="{{ route('owner.kebutuhan') }}" 
            class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.kebutuhan') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
             Kebutuhan
