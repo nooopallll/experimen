@@ -345,7 +345,11 @@
             <div class="p-6">
                 <div class="mb-6 bg-blue-50 p-4 rounded-xl text-center border border-blue-100"><span class="text-xs text-blue-600 font-bold uppercase">Poin Kamu</span><div class="text-3xl font-black text-[#3b66ff] mt-1"><span id="display-poin-modal">0</span> pts</div></div>
                 <div class="space-y-3 mb-6">
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition"><input type="radio" name="reward_option" value="diskon" class="mr-3 text-[#3b66ff]" checked><div><p class="font-bold text-sm text-gray-800">Diskon Tunai Rp 10.000</p></div></label>
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="reward_option" value="diskon" class="mr-3 text-[#3b66ff]" checked>
+                        {{-- Tampilkan nominal dari database --}}
+                        <div><p class="font-bold text-sm text-gray-800">Diskon Tunai Rp {{ number_format($nominal_diskon ?? 10000, 0, ',', '.') }}</p></div>
+                    </label>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition"><input type="radio" name="reward_option" value="parfum" class="mr-3 text-[#3b66ff]"><div><p class="font-bold text-sm text-gray-800">Free Parfum (8 Poin)</p></div></label>
                 </div>
                 <div class="flex justify-end space-x-3"><button type="button" onclick="window.closeClaimModal()" class="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold">Batal</button><button type="button" onclick="window.applyReward()" class="px-6 py-2 bg-[#3b66ff] text-white rounded-lg font-bold shadow-lg">Terapkan</button></div>
@@ -480,10 +484,12 @@
             const radio = document.querySelector('input[name="reward_option"]:checked'); 
             if (!radio) { alert("Pilih reward dulu!"); return; }
             const choice = radio.value; 
-            const discount = (choice === 'diskon') ? 10000 : 0;
+            // Ambil nilai diskon dari variabel PHP yang dikirim controller
+            const nominalDiskon = {{ $nominal_diskon ?? 10000 }};
+            const discount = (choice === 'diskon') ? nominalDiskon : 0;
             $('#input_claim_type').val(choice);
             $('#input_discount_amount').val(discount);
-            let badgeText = choice === 'diskon' ? 'Reward: Diskon 10rb' : 'Reward: Free Parfum';
+            let badgeText = choice === 'diskon' ? 'Reward: Diskon ' + (nominalDiskon/1000) + 'rb' : 'Reward: Free Parfum';
             $('#reward-badge').text(badgeText).removeClass('hidden');
             window.closeClaimModal();
             calculateGlobalTotal();

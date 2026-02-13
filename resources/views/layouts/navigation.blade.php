@@ -25,6 +25,12 @@
                             {{ __('Laporan Pendapatan') }}
                         </x-nav-link>
                     @endif
+                    
+                    @if(auth()->user()->role === 'owner')
+                        <x-nav-link :href="route('owner.settings.index')" :active="request()->routeIs('owner.settings.index')">
+                            {{ __('Manajemen Diskon') }}
+                        </x-nav-link>
+                    @endif
 
                     <x-nav-link :href="route('owner.kebutuhan')" :active="request()->routeIs('owner.kebutuhan')">
                         {{ __('Belanja Kebutuhan') }}

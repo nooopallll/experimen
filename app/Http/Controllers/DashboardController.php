@@ -158,8 +158,8 @@ class DashboardController extends Controller
         $query = Order::with(['customer', 'details']);
 
         // A. Filter Tanggal Masuk (Wajib untuk Grafik, Default 30 Hari Terakhir)
-        $startDate = $request->input('tgl_masuk_start', now()->subDays(29)->format('Y-m-d'));
-        $endDate   = $request->input('tgl_masuk_end', now()->format('Y-m-d'));
+        $startDate = $request->input('tgl_masuk_start') ?: now()->subDays(29)->format('Y-m-d');
+        $endDate   = $request->input('tgl_masuk_end') ?: now()->format('Y-m-d');
         
         $query->whereBetween('created_at', [
             Carbon::parse($startDate)->startOfDay(), 

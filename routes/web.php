@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KebutuhanController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\TreatmentController;
+use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -122,6 +123,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/owner/treatments', [TreatmentController::class, 'store'])->name('owner.treatments.store');
     Route::put('/owner/treatments/{id}', [TreatmentController::class, 'update'])->name('owner.treatments.update');
     Route::delete('/owner/treatments/{id}', [TreatmentController::class, 'destroy'])->name('owner.treatments.destroy');
+
+    // Manajemen Diskon (Owner)
+    Route::get('/owner/settings', [SettingController::class, 'index'])->name('owner.settings.index');
+    Route::post('/owner/settings', [SettingController::class, 'update'])->name('owner.settings.update');
     });
 
 require __DIR__.'/auth.php';

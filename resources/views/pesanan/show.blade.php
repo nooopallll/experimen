@@ -37,8 +37,8 @@
             // --- LOGIKA HARGA ---
             totalPrice: 0, 
             get discount() { 
-                if (this.claimType === 'diskon') return 10000; 
-                if (this.claimStatus === 'Diskon' && this.claimType === '') return 10000; 
+                if (this.claimType === 'diskon') return {{ $nominalDiskon ?? 10000 }}; 
+                if (this.claimStatus === 'Diskon' && this.claimType === '') return {{ $nominalDiskon ?? 10000 }}; 
                 return 0; 
             },
             get finalBill() { return Math.max(0, this.totalPrice - this.discount); },
@@ -227,7 +227,7 @@
                     <div class="space-y-3 mb-6">
                         <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
                             <input type="radio" value="diskon" x-model="tempReward" class="mr-3 text-[#3b66ff]">
-                            <div><p class="font-bold text-sm text-gray-800">Diskon Tunai Rp 10.000</p></div>
+                            <div><p class="font-bold text-sm text-gray-800">Diskon Tunai Rp {{ number_format($nominalDiskon ?? 10000, 0, ',', '.') }}</p></div>
                         </label>
                         <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
                             <input type="radio" value="parfum" x-model="tempReward" class="mr-3 text-[#3b66ff]">
