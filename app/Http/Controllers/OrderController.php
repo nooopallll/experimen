@@ -33,12 +33,37 @@ class OrderController extends Controller
                   });
             });
         }
+
+        // Filter Lanjutan
+        if ($request->filled('tgl_masuk')) {
+            $query->whereDate('created_at', '>=', $request->tgl_masuk);
+        }
+        if ($request->filled('tgl_keluar')) {
+            $query->whereHas('details', function($q) use ($request) {
+                $q->whereDate('estimasi_keluar', $request->tgl_keluar);
+            });
+        }
+        if ($request->filled('kategori_customer')) {
+            $query->where('tipe_customer', $request->kategori_customer);
+        }
+        if ($request->filled('treatment')) {
+            $query->whereHas('details', function($q) use ($request) {
+                $q->where('layanan', $request->treatment);
+            });
+        }
+        if ($request->filled('komplain')) {
+            $query->where('catatan', '!=', '-')->whereNotNull('catatan');
+        }
+
         $orders = $query->paginate(10);
+
+        // Ambil data treatments untuk dropdown filter
+        $treatments = Treatment::orderBy('nama_treatment', 'asc')->get(); // Pastikan data diambil
 
         if ($request->ajax()) {
             return view('pesanan.partials.list', compact('orders'))->render();
         }
-        return view('pesanan.index', compact('orders')); 
+        return view('pesanan.index', compact('orders', 'treatments')); 
     }
 
     /**
