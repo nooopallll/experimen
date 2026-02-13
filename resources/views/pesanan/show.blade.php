@@ -58,8 +58,11 @@
             
             {{-- HEADER --}}
             <div class="mb-6 flex items-center justify-between">
-                <a href="{{ route('pesanan.index') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 transition">
-                    &larr; Kembali ke Daftar
+                <a href="{{ route('pesanan.index') }}" class="group inline-flex items-center px-5 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-sm text-gray-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-blue-600 transition-colors group-hover:-translate-x-1 transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Kembali
                 </a>
                 <div class="text-right">
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -77,14 +80,27 @@
                 <input type="hidden" name="nama_customer" value="{{ $order->customer->nama ?? $order->nama_customer }}">
                 {{-- Input Hidden Terikat Alpine --}}
                 <input type="hidden" name="claim_type" x-model="claimType"> 
+                <input type="hidden" name="status" value="{{ $order->status_order }}">
+                <input type="hidden" name="catatan" value="{{ $order->catatan }}">
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {{-- HEADER 1: Data Pelanggan & Status Info --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     
-                    {{-- KARTU KIRI --}}
-                    <div class="col-span-1 space-y-6">
-                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                            <div class="p-6 bg-white border-b border-gray-200">
-                                <h3 class="text-lg font-medium text-gray-900 mb-4">Data Pelanggan</h3>
+                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg h-full">
+                            <div class="p-6 bg-white border-b border-gray-200 h-full">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <h3 class="text-lg font-medium text-gray-900">Data Pelanggan</h3>
+                                    @php
+                                        $tipe = $order->tipe_customer ?? 'New Customer';
+                                        $colors = [
+                                            'Member' => 'bg-pink-100 text-pink-800 border-pink-200',
+                                            'Repeat Order' => 'bg-green-100 text-green-800 border-green-200',
+                                            'New Customer' => 'bg-blue-100 text-blue-800 border-blue-200',
+                                        ];
+                                        $badgeColor = $colors[$tipe] ?? $colors['New Customer'];
+                                    @endphp
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide border {{ $badgeColor }}">{{ $tipe }}</span>
+                                </div>
                                 <dl class="space-y-4 text-sm">
                                     <div><dt class="text-gray-500">Nama Lengkap</dt><dd class="font-semibold text-gray-900">{{ $order->customer->nama ?? '-' }}</dd></div>
                                     <div><dt class="text-gray-500">Nomor WhatsApp</dt><dd class="font-semibold text-gray-900">{{ $order->customer->no_hp ?? '-' }}</dd></div>
@@ -107,13 +123,13 @@
                                     @endif
                                 </dl>
                             </div>
-                        </div>
+                    </div>
 
-                        {{-- Status & Info --}}
-                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                            <div class="p-6 bg-white border-b border-gray-200">
+                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg h-full">
+                            <div class="p-6 bg-white border-b border-gray-200 h-full">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Status & Info</h3>
                                 <dl class="space-y-3 text-sm">
+                                    <div><dt class="text-gray-500 font-bold">Tanggal Masuk</dt><dd class="font-semibold text-gray-900 mt-1">{{ $order->created_at->format('d M Y, H:i') }}</dd></div>
                                     <div><dt class="text-gray-500 font-bold">CS Masuk</dt><dd class="font-semibold text-gray-900 mt-1">{{ $order->kasir ?? '-' }}</dd></div>
                                     <div>
                                         <dt class="text-gray-500 font-bold mb-1">CS Keluar (Penyerah)</dt>
@@ -125,42 +141,12 @@
                                             </select>
                                         </dd>
                                     </div>
-                                    
-                                    {{-- STATUS ORDER (READ ONLY - OTOMATIS) --}}
-                                    <div>
-                                        <dt class="text-gray-500 font-bold mb-1">Status Order</dt>
-                                        <dd>
-                                            @php
-                                                $statusColors = [
-                                                    'Baru' => 'bg-gray-100 text-gray-800 border-gray-200',
-                                                    'Proses' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                                                    'Selesai' => 'bg-green-100 text-green-800 border-green-200',
-                                                    'Diambil' => 'bg-blue-100 text-blue-800 border-blue-200',
-                                                    'Batal' => 'bg-red-100 text-red-800 border-red-200',
-                                                ];
-                                                $currentColor = $statusColors[$order->status_order] ?? 'bg-gray-100 text-gray-800';
-                                            @endphp
-                                            
-                                            {{-- Tampilan Badge --}}
-                                            <div class="w-full text-sm font-bold rounded-full border {{ $currentColor }} py-2 px-3 text-center uppercase tracking-wide">
-                                                {{ $order->status_order }}
-                                            </div>
-                                            
-                                            {{-- Input Hidden agar controller tetap menerima field ini (sebagai fallback) --}}
-                                            <input type="hidden" name="status" value="{{ $order->status_order }}">
-                                            <p class="text-[10px] text-gray-400 mt-1 italic text-center">*Status berubah otomatis mengikuti item</p>
-                                        </dd>
-                                    </div>
-
-                                    <div><dt class="text-gray-500 font-bold">Tanggal Masuk</dt><dd class="font-semibold text-gray-900 mt-1">{{ $order->created_at->format('d M Y, H:i') }}</dd></div>
-                                    <div class="pt-2"><dt class="text-gray-500 font-bold mb-1">Catatan Order</dt><dd><textarea name="catatan" rows="3" class="w-full text-sm bg-gray-50 border border-gray-300 rounded-lg p-2.5">{{ $order->catatan ?? '' }}</textarea></dd></div>
                                 </dl>
                             </div>
-                        </div>
                     </div>
+                </div>
 
-                    {{-- KARTU KANAN: ITEM DETAILS --}}
-                    <div class="col-span-1 md:col-span-2">
+                {{-- HEADER 2: Rincian Layanan --}}
                         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                             <div class="p-6 bg-white border-b border-gray-200">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Rincian Layanan</h3>
@@ -182,7 +168,13 @@
                                                     <input type="text" name="item[]" value="{{ $item->nama_barang }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm font-bold text-gray-900">
                                                     <input type="text" name="catatan_detail[]" value="{{ $item->catatan }}" class="w-full px-2 py-1 mt-1 bg-white border border-gray-200 rounded text-xs text-gray-500" placeholder="Catatan item...">
                                                 </td>
-                                                <td class="p-2 align-top"><input type="text" name="kategori_treatment[]" value="{{ $item->layanan }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm"></td>
+                                                <td class="p-2 align-top">
+                                                    <select name="kategori_treatment[]" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm cursor-pointer">
+                                                        @foreach($treatments as $t)
+                                                            <option value="{{ $t->nama_treatment }}" {{ $item->layanan == $t->nama_treatment ? 'selected' : '' }}>{{ $t->nama_treatment }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
                                                 <td class="p-2 align-top"><input type="date" name="tanggal_keluar[]" value="{{ $item->estimasi_keluar ? \Carbon\Carbon::parse($item->estimasi_keluar)->format('Y-m-d') : '' }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs"></td>
                                                 <td class="p-2 align-top">
                                                     <select name="status_detail[]" class="w-full px-1 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-semibold">
@@ -207,8 +199,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
             </form>
 
             {{-- MODAL CLAIM REWARD (Di dalam x-data scope) --}}
@@ -354,7 +344,6 @@
                             populateInvoice(response);
                             document.getElementById('modal-invoice').style.display = 'flex'; // Manual Show
                         } else {
-                            alert('Perubahan berhasil disimpan!');
                             window.location.href = '{{ route("pesanan.index") }}'; // Redirect jika cuma simpan
                         }
                     }

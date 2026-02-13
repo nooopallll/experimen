@@ -90,18 +90,12 @@
                                                                     <div class="text-xs font-bold text-blue-600 mt-1">Rp{{ number_format($item->harga, 0, ',', '.') }}</div>
                                                                 </td>
                                                                 <td class="px-6 py-4">
-                                                                    <form action="{{ route('pesanan.detail.update', $item->id) }}" method="POST">
-                                                                        @csrf
-                                                                        <select name="status" onchange="this.form.submit()" 
-                                                                            class="text-xs font-bold rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 cursor-pointer py-1.5 pl-3 pr-8 shadow-sm transition
-                                                                            @if($item->status == 'Selesai') bg-green-50 text-green-700 border-green-200
-                                                                            @elseif($item->status == 'Diambil') bg-blue-50 text-blue-700 border-blue-200
-                                                                            @else bg-yellow-50 text-yellow-700 border-yellow-200 @endif">
-                                                                            <option value="Proses" {{ $item->status == 'Proses' ? 'selected' : '' }}>Proses</option>
-                                                                            <option value="Selesai" {{ $item->status == 'Selesai' ? 'selected' : '' }}>Selesai</option>
-                                                                            <option value="Diambil" {{ $item->status == 'Diambil' ? 'selected' : '' }}>Diambil</option>
-                                                                        </select>
-                                                                    </form>
+                                                                    <span class="px-3 py-1 rounded-full text-xs font-bold border 
+                                                                        @if($item->status == 'Selesai') bg-green-50 text-green-700 border-green-200
+                                                                        @elseif($item->status == 'Diambil') bg-blue-50 text-blue-700 border-blue-200
+                                                                        @else bg-yellow-50 text-yellow-700 border-yellow-200 @endif">
+                                                                        {{ $item->status }}
+                                                                    </span>
                                                                 </td>
                                                                 <td class="px-6 py-4 text-center">
                                                                     <div class="flex items-center justify-center space-x-3">
