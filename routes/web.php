@@ -31,6 +31,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('cek-customer');
     })->name('dashboard');
 
+    Route::get('/owner/laporan-pendapatan', [DashboardController::class, 'laporan'])
+    ->name('owner.laporan');
+
     // ==========================================
     // MODULE: MANAJEMEN PESANAN (Order List)
     // ==========================================

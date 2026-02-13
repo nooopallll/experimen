@@ -2,14 +2,38 @@
     <div class="px-4 sm:px-6 lg:px-8 h-full">
         <div class="flex justify-between items-center h-full">
             
-            <div class="flex items-center">
+            {{-- BAGIAN KIRI: Toggle Mobile & Menu Desktop --}}
+            <div class="flex items-center h-full">
+                
+                {{-- 1. Tombol Hamburger (Hanya muncul di Mobile / md:hidden) --}}
                 <button @click="sidebarOpen = !sidebarOpen" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none transition duration-150 ease-in-out md:hidden">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
+
+                {{-- 2. Menu Links (Hanya muncul di Desktop / hidden md:flex) --}}
+                {{-- Link yang Anda kirim saya letakkan di sini --}}
+                <div class="hidden md:flex space-x-8 sm:ml-10 h-full">
+                    
+                    <x-nav-link :href="route('owner.dashboard')" :active="request()->routeIs('owner.dashboard')">
+                        {{ __('Dashboard') }}
+                    </x-nav-link>
+
+                    @if(auth()->user()->role === 'owner')
+                        <x-nav-link :href="route('owner.laporan')" :active="request()->routeIs('owner.laporan')">
+                            {{ __('Laporan Pendapatan') }}
+                        </x-nav-link>
+                    @endif
+
+                    <x-nav-link :href="route('owner.kebutuhan')" :active="request()->routeIs('owner.kebutuhan')">
+                        {{ __('Belanja Kebutuhan') }}
+                    </x-nav-link>
+
+                </div>
             </div>
 
+            {{-- BAGIAN KANAN: Dropdown Profil User --}}
             <div class="flex items-center">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
@@ -44,4 +68,4 @@
             
         </div>
     </div>
-</nav>
+</nav>   

@@ -15,7 +15,18 @@
         <style>
             [x-cloak] { display: none !important; }
             html, body { height: 100%; overflow: hidden; margin: 0; }
+            
+            /* Styling untuk Loading Bar (NProgress) */
+            #nprogress .bar { background: #00e676 !important; height: 3px !important; }
+            #nprogress .peg { box-shadow: 0 0 10px #00e676, 0 0 5px #00e676 !important; }
         </style>
+
+        {{-- 1. NProgress (Loading Bar Visual) --}}
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
+
+        {{-- 2. Instant.page (Otomatis Preload Halaman saat Mouse Hover) --}}
+        <script src="//instant.page/5.2.0" type="module" integrity="sha384-jnZyxPjiipYXnSU0ygqeac2q7CVYMbh84GO0uHryrrjkGy9/qhXA6U/CSIjhMTp3"></script>
     </head>
     <body class="font-sans antialiased h-full">
         
@@ -53,6 +64,10 @@
                         {{-- Style disamakan persis dengan menu admin di bawah --}}
                         <a href="{{ route('owner.dashboard') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.dashboard') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
                             Dashboard Owner
+                        </a>
+
+                        <a href="{{ route('owner.laporan') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.laporan') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
+                            Laporan Pendapatan
                         </a>
 
  <a href="{{ route('owner.kebutuhan') }}" 
@@ -135,5 +150,6 @@
             </div>
 
         </div>
+
     </body>
 </html>

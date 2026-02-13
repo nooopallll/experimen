@@ -330,7 +330,7 @@
     {{-- SCRIPT JS --}}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        const rupiahFormatter = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 });
+        var rupiahFormatter = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 });
 
         // 1. UPDATE ORDER (AJAX)
         window.updateOrder = function(shouldPrint) {
