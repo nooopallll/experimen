@@ -66,7 +66,7 @@
                 
                 <div class="bg-[#E0E0E0] rounded-lg p-3 px-5 flex flex-col justify-center hover:shadow-md transition relative">
                     <label class="block text-sm font-semibold text-gray-600 mb-1">Cs Masuk</label>
-                    <select name="cs" class="w-full bg-transparent border-none p-0 pr-8 focus:ring-0 text-gray-800 font-bold cursor-pointer appearance-none">
+                    <select name="cs" style="background-image: none;" class="w-full bg-transparent border-none p-0 pr-8 focus:ring-0 text-gray-800 font-bold cursor-pointer appearance-none">
                         <option value="" disabled selected>- Pilih Karyawan -</option>
                         @foreach($karyawans as $k)
                             <option value="{{ $k->nama_karyawan }}">{{ $k->nama_karyawan }}</option>
@@ -115,10 +115,23 @@
                                     <option value="">- Pilih Kat. Dulu -</option>
                                 </select>
                             </div>
+                            
                             <div class="md:col-span-3">
                                 <label class="block text-[10px] font-bold text-gray-500 mb-1">Estimasi</label>
-                                <input type="text" name="tanggal_keluar[]" class="w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 text-xs font-medium text-gray-800 focus:ring-blue-500" placeholder="Pilih Tanggal" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                                <div class="relative w-full">
+                                    <input type="date" name="tanggal_keluar[]"
+                                           class="w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 text-xs font-medium text-gray-800 focus:ring-blue-500 cursor-pointer"
+                                           style="color: transparent;"
+                                           onfocus="this.style.color='inherit'; this.nextElementSibling.classList.add('hidden');"
+                                           onblur="if(!this.value){ this.style.color='transparent'; this.nextElementSibling.classList.remove('hidden'); }"
+                                           onchange="this.style.color='inherit'; this.nextElementSibling.classList.add('hidden');">
+                                           
+                                    <span class="absolute inset-y-0 left-2 flex items-center text-gray-400 text-xs pointer-events-none transition-opacity">
+                                        Pilih Tanggal
+                                    </span>
+                                </div>
                             </div>
+                            
                             <div class="md:col-span-3">
                                 <label class="block text-[10px] font-bold text-gray-500 mb-1">Harga</label>
                                 <div class="relative">
@@ -143,42 +156,43 @@
                 </div>
             </div>
 
-{{-- BOX TIPE CUSTOMER (KIRI) & POIN (KANAN) --}}
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-center">
-    {{-- Tipe Customer (Kiri) --}}
-    <div id="box-tipe-customer" class="bg-[#E0E0E0] rounded-lg p-3 px-5 hover:shadow-md transition">
-        <label class="block text-sm font-semibold text-gray-600 mb-1">Tipe Customer</label>
-        <input type="text" 
-               name="tipe_customer" 
-               id="input_tipe_customer" 
-               value="{{ $tipe_pilihan ?? '' }}" 
-               class="w-full bg-transparent border-none p-0 focus:ring-0 text-gray-800 font-bold placeholder-gray-500"
-               placeholder="Isi Tipe Customer (Cth: General)">
-    </div>
+            {{-- BOX TIPE CUSTOMER (KIRI) & POIN (KANAN) --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-center">
+                {{-- Tipe Customer (Kiri) --}}
+                <div id="box-tipe-customer" class="bg-[#E0E0E0] rounded-lg p-3 px-5 hover:shadow-md transition">
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">Tipe Customer</label>
+                    <input type="text" 
+                           name="tipe_customer" 
+                           id="input_tipe_customer" 
+                           value="{{ $tipe_pilihan ?? '' }}" 
+                           class="w-full bg-transparent border-none p-0 focus:ring-0 text-gray-800 font-bold placeholder-gray-500"
+                           placeholder="Isi Tipe Customer (Cth: General)">
+                </div>
 
-    {{-- Box Point Mepet Kanan --}}
-    <div class="flex justify-end">
-        <div id="box-point" class="bg-[#E0E0E0] rounded-lg p-2 px-4 flex items-center gap-4 hover:shadow-md transition w-fit border border-gray-300 {{ ($is_member ?? false) ? '' : 'hidden' }}">
-            <div class="flex flex-col border-r border-gray-400 pr-4">
-                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Point</label>
-                <span id="poin-text" class="text-gray-800 font-black text-base leading-none">{{ $poin ?? 0 }}/8</span>
+                {{-- Box Point Mepet Kanan --}}
+                <div class="flex justify-end">
+                    <div id="box-point" class="bg-[#E0E0E0] rounded-lg p-2 px-4 flex items-center gap-4 hover:shadow-md transition w-fit border border-gray-300 {{ ($is_member ?? false) ? '' : 'hidden' }}">
+                        <div class="flex flex-col border-r border-gray-400 pr-4">
+                            <label class="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Point</label>
+                            <span id="poin-text" class="text-gray-800 font-black text-base leading-none">{{ $poin ?? 0 }}/8</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-claim" onclick="window.openClaimModal()" 
+                                    class="bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md shadow-sm hover:bg-blue-700 transition {{ ($poin ?? 0) >= 8 ? '' : 'hidden' }}">
+                                CLAIM
+                            </button>
+                            <span id="reward-badge" class="text-[9px] bg-green-500 text-white px-2 py-1 rounded-full animate-pulse hidden"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <div class="flex items-center gap-2">
-                <button type="button" id="btn-claim" onclick="window.openClaimModal()" 
-                        class="bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-md shadow-sm hover:bg-blue-700 transition {{ ($poin ?? 0) >= 8 ? '' : 'hidden' }}">
-                    CLAIM
-                </button>
-                <span id="reward-badge" class="text-[9px] bg-green-500 text-white px-2 py-1 rounded-full animate-pulse hidden"></span>
-            </div>
-        </div>
-    </div>
-</div>
             {{-- SUMBER INFO: OTOMATIS HIDDEN UNTUK MEMBER/REPEAT ORDER --}}
             <div id="box-sumber-info" class="grid grid-cols-1 mb-12 {{ ($is_member ?? false) || ($status ?? '') == 'Repeat Order' ? 'hidden' : '' }}">
                 <div class="md:w-1/2 bg-[#E0E0E0] rounded-lg p-3 px-5 relative hover:shadow-md transition">
                     <label class="block text-sm font-semibold text-gray-600 mb-1">Tau Tempat ini Dari...</label>
-                    <select name="sumber_info" class="w-full bg-transparent border-none p-0 pr-8 focus:ring-0 text-gray-800 font-medium cursor-pointer appearance-none">
+                    <select name="sumber_info" style="background-image: none;" class="w-full bg-transparent border-none p-0 pr-8 focus:ring-0 text-gray-800 font-medium cursor-pointer appearance-none">
                         <option value="Instagram">Instagram</option>
                         <option value="Teman">Teman</option>
                         <option value="Google Maps">Google Maps</option>
@@ -191,9 +205,15 @@
             </div>
 
             {{-- FOOTER BUTTONS --}}
-            <div class="flex justify-end gap-4">
-                <button type="button" id="btn-daftar-member" onclick="window.openMemberModal()" class="bg-[#3b66ff] text-white px-10 py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition {{ ($is_member ?? false) ? 'hidden' : '' }}">MEMBER</button>
-                <button type="button" onclick="window.openPaymentModal()" class="bg-[#3b66ff] text-white px-12 py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition transform hover:scale-105">PROSES PEMBAYARAN</button>
+            <div class="flex flex-col md:flex-row justify-end gap-3 md:gap-4 mt-2">
+                <button type="button" id="btn-daftar-member" onclick="window.openMemberModal()" 
+                        class="w-full md:w-auto bg-[#3b66ff] text-white px-6 md:px-10 py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition {{ ($is_member ?? false) ? 'hidden' : '' }}">
+                    MEMBER
+                </button>
+                <button type="button" onclick="window.openPaymentModal()" 
+                        class="w-full md:w-auto bg-[#3b66ff] text-white px-6 md:px-12 py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition transform md:hover:scale-105">
+                    PROSES PEMBAYARAN
+                </button>
             </div>
 
             {{-- MODAL PAYMENT --}}
@@ -545,30 +565,56 @@
             const filtered = rawTreatments.filter(t => t.kategori && t.kategori.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
             filtered.forEach(t => { const option = document.createElement('option'); option.value = t.nama_treatment; option.textContent = t.nama_treatment; treatmentSelect.appendChild(option); });
         }
+
         function attachEventsToTreatmentRow(row) {
             const priceInput = row.querySelector('.harga-input'); if(!priceInput) return;
             priceInput.addEventListener('input', function(e) { let raw = this.value.replace(/[^0-9]/g, ''); this.value = raw ? rupiahFormatter.format(raw) : ''; calculateGlobalTotal(); });
         }
+
         window.syncMainInputs = function(source, targetClass) { const group = source.closest('.item-group'); group.querySelectorAll('.' + targetClass).forEach(input => input.value = source.value); }
+        
         window.addTreatmentRow = function(btn) {
             const group = btn.closest('.item-group'); const container = group.querySelector('.treatments-container');
             const mainItemValue = group.querySelector('.main-item-input').value;
             const mainCatatanValue = group.querySelector('.main-catatan-input').value;
             const newRow = container.querySelector('.treatment-row').cloneNode(true);
             newRow.querySelectorAll('select').forEach(s => s.selectedIndex = 0); newRow.querySelector('.treatment-select').innerHTML = '<option value="">- Pilih Kat. Dulu -</option>';
+            
             newRow.querySelectorAll('input').forEach(i => {
-                if (i.classList.contains('hidden-item')) i.value = mainItemValue; else if (i.classList.contains('hidden-catatan')) i.value = mainCatatanValue;
-                else { i.value = ''; if(i.name === 'tanggal_keluar[]') i.type = 'text'; }
+                if (i.classList.contains('hidden-item')) i.value = mainItemValue; 
+                else if (i.classList.contains('hidden-catatan')) i.value = mainCatatanValue;
+                else { 
+                    i.value = ''; 
+                    if(i.name === 'tanggal_keluar[]') {
+                        i.style.color = 'transparent';
+                        i.nextElementSibling.classList.remove('hidden');
+                    }
+                }
             });
+            
             newRow.querySelector('.btn-remove-treatment').classList.remove('hidden'); attachEventsToTreatmentRow(newRow); container.appendChild(newRow);
         }
+
         window.removeTreatment = function(btn) { const row = btn.closest('.treatment-row'); if (row.parentElement.querySelectorAll('.treatment-row').length > 1) row.remove(); calculateGlobalTotal(); }
+        
         window.adjustJumlah = function(delta) {
             const input = document.getElementById('inputJumlah'); const container = document.getElementById('itemsContainer'); let val = parseInt(input.value) || 1;
-            if (delta > 0) { val++; const newGroup = container.querySelector('.item-group').cloneNode(true); newGroup.querySelectorAll('input').forEach(i => { i.value = ''; if(i.name === 'tanggal_keluar[]') i.type = 'text'; }); container.appendChild(newGroup); } 
+            if (delta > 0) { 
+                val++; 
+                const newGroup = container.querySelector('.item-group').cloneNode(true); 
+                newGroup.querySelectorAll('input').forEach(i => { 
+                    i.value = ''; 
+                    if(i.name === 'tanggal_keluar[]') {
+                        i.style.color = 'transparent';
+                        i.nextElementSibling.classList.remove('hidden');
+                    }
+                }); 
+                container.appendChild(newGroup); 
+            } 
             else if (val > 1) { val--; container.removeChild(container.lastElementChild); } input.value = val;
             calculateGlobalTotal();
         }
+
         window.openMemberModal = function() { document.getElementById('memberModal').classList.remove('hidden'); }
         function formatRupiahInput(input) { let val = input.value.replace(/[^0-9]/g, ''); input.value = val ? rupiahFormatter.format(val) : ''; }
     </script>
