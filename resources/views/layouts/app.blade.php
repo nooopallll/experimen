@@ -35,10 +35,10 @@
             {{-- SIDEBAR --}}
             <aside x-cloak
                    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
-                   class="fixed inset-y-0 left-0 z-50 w-64 bg-[#003d4d] text-white flex flex-col p-6 rounded-r-[30px] transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto shadow-2xl -translate-x-full h-full">
+                   class="fixed inset-y-0 left-0 z-50 w-64 bg-[#003d4d] text-white flex flex-col p-6 rounded-r-[30px] transition-transform duration-300 ease-in-out xl:translate-x-0 xl:static xl:inset-auto shadow-2xl -translate-x-full h-full">
                 
                 {{-- Tombol Close (Mobile) --}}
-                <button @click="sidebarOpen = false" class="md:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+                <button @click="sidebarOpen = false" class="xl:hidden absolute top-4 right-4 text-white hover:text-gray-300">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
 
@@ -68,10 +68,6 @@
 
                         <a href="{{ route('owner.laporan') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.laporan') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
                             Laporan Pendapatan
-                        </a>
-
-                        <a href="{{ route('owner.settings.index') }}" class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('owner.settings.index') ? 'bg-white/20 font-semibold' : 'hover:bg-white/10' }}">
-                            Manajemen Diskon
                         </a>
 
  <a href="{{ route('owner.kebutuhan') }}" 
@@ -124,7 +120,7 @@
             <div class="flex-1 flex flex-col h-full overflow-hidden bg-white w-full">
                 
                 {{-- Header Mobile --}}
-                <div class="p-4 md:hidden flex justify-between items-center bg-white border-b shrink-0 z-40 relative shadow-sm">
+                <div class="p-4 xl:hidden flex justify-between items-center bg-white border-b shrink-0 z-40 relative shadow-sm">
                     <button @click="sidebarOpen = true" class="text-[#003d4d] focus:outline-none hover:bg-gray-100 p-2 rounded-md">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -135,7 +131,7 @@
                 </div>
 
                 {{-- Main Content --}}
-                <main class="flex-1 overflow-y-auto p-6 md:p-12">
+                <main class="flex-1 overflow-y-auto p-6 md:p-12 {{ request()->routeIs('dashboard', 'order.search', 'order.check') ? 'flex flex-col justify-center items-center' : '' }}">
                     {{ $slot }}
                 </main>
             </div>
@@ -149,7 +145,7 @@
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
                  @click="sidebarOpen = false" 
-                 class="fixed inset-0 bg-black/50 z-40 md:hidden" 
+                 class="fixed inset-0 bg-black/50 z-40 xl:hidden" 
                  style="display: none;">
             </div>
 
