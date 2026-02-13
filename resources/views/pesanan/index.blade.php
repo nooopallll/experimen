@@ -114,11 +114,9 @@
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Treatment</label>
                             <select name="treatment" class="w-full text-sm border-gray-300 rounded-lg focus:ring-blue-500">
                                 <option value="">Semua Treatment</option>
-                                @if(isset($treatments))
-                                    @foreach($treatments as $t)
-                                        <option value="{{ $t->nama_treatment }}" {{ request('treatment') == $t->nama_treatment ? 'selected' : '' }}>{{ $t->nama_treatment }}</option>
-                                    @endforeach
-                                @endif
+                                @foreach($treatments as $t)
+                                    <option value="{{ $t->nama_treatment }}" {{ request('treatment') == $t->nama_treatment ? 'selected' : '' }}>{{ $t->nama_treatment }}</option>
+                                @endforeach
                             </select>
                         </div>
                     </div>
