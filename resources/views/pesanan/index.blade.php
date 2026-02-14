@@ -144,6 +144,42 @@
 
     {{-- SCRIPT SEARCH ENGINE (Tetap dipertahankan) --}}
     <script>
+        // FUNGSI TOGGLE WA & AUTO SEND
+        window.toggleWa = function(id, type) {
+            const url = "{{ url('/pesanan') }}/" + id + "/toggle-wa/" + type;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // 1. Buka WhatsApp di tab baru jika ada URL
+                    if(data.wa_url) {
+                        window.open(data.wa_url, '_blank');
+                    }
+                    
+                    // 2. Refresh Tabel (Trigger pencarian ulang)
+                    const searchInput = document.getElementById('search-input');
+                    if(searchInput) {
+                        const event = new Event('keyup');
+                        searchInput.dispatchEvent(event);
+                    } else {
+                        location.reload();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Gagal memproses permintaan.');
+            });
+        }
+
         function openModal(modalId) {
             const modal = document.getElementById(modalId);
             if(modal) modal.classList.remove('hidden');

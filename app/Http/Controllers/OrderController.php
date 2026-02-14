@@ -368,6 +368,65 @@ class OrderController extends Controller
         }
     }
 
+    public function toggleWa(Request $request, $id, $type)
+    {
+        $order = Order::with(['customer', 'details'])->findOrFail($id);
+        
+        $waUrl = null;
+        $customer = $order->customer;
+        $phone = $customer ? $customer->no_hp : '';
+        
+        // Format nomor HP (08 -> 628)
+        if (substr($phone, 0, 1) == '0') {
+            $phone = '62' . substr($phone, 1);
+        }
+
+        if ($type == '1') {
+            $order->wa_sent_1 = !$order->wa_sent_1;
+            
+            // Jika status berubah jadi TERKIRIM (True), buat link WA Invoice
+            if ($order->wa_sent_1 && $phone) {
+                $items = $order->details->map(fn($d) => $d->nama_barang)->join(', ');
+                $total = number_format($order->total_harga, 0, ',', '.');
+                
+                $msg = "Halo Kak *{$customer->nama}*,\n\n";
+                $msg .= "Terima kasih telah mempercayakan sepatu kakak di *Louwes Care*.\n";
+                $msg .= "No Nota: *{$order->no_invoice}*\n";
+                $msg .= "Item: {$items}\n";
+                $msg .= "Total: *Rp {$total}*\n\n";
+                $msg .= "Simpan pesan ini sebagai bukti pengambilan ya kak! 👟✨";
+                
+                $waUrl = "https://wa.me/{$phone}?text=" . urlencode($msg);
+            }
+
+        } elseif ($type == '2') {
+            $order->wa_sent_2 = !$order->wa_sent_2;
+
+            // Jika status berubah jadi TERKIRIM (True), buat link WA Pengambilan
+            if ($order->wa_sent_2 && $phone) {
+                $msg = "Halo Kak *{$customer->nama}*,\n\n";
+                $msg .= "Sepatu kakak dengan No Nota: *{$order->no_invoice}* sudah *SELESAI* diproses dan bisa diambil di outlet Louwes Care.\n\n";
+                $msg .= "Kami tunggu kedatangannya ya! 🙌";
+                
+                $waUrl = "https://wa.me/{$phone}?text=" . urlencode($msg);
+            }
+        }
+
+        $order->save();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'status' => 'success', 
+                'wa_sent_1' => $order->wa_sent_1, 
+                'wa_sent_2' => $order->wa_sent_2,
+                'wa_url' => $waUrl // Kirim URL ke frontend
+            ]);
+        }
+        
+        if ($waUrl) return redirect($waUrl);
+        return back()->with('success', 'Status WA diperbarui.');
+    }
+
     // --- HELPER FUNCTIONS ---
 
     public function check(Request $request)

@@ -166,25 +166,19 @@
                         <td class="p-4 align-middle">
                             <div class="flex items-center justify-center gap-2">
                                 {{-- WA Masuk --}}
-                                <form action="{{ route('pesanan.toggle-wa', ['id' => $order->id, 'type' => 1]) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-full transition shadow-sm border {{ $order->wa_sent_1 ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100' }}" title="WA Masuk">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                                    </button>
-                                </form>
+                                <button type="button" onclick="toggleWa('{{ $order->id }}', '1')" class="w-8 h-8 flex items-center justify-center rounded-full transition shadow-sm border {{ $order->wa_sent_1 ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100' }}" title="WA Masuk">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                </button>
                                 {{-- Edit --}}
                                 <a href="{{ route('pesanan.show', $order->id) }}" class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition shadow-sm" title="Edit Pesanan">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.199z" /></svg>
                                 </a>
                                 {{-- WA Ambil --}}
-                                <form action="{{ route('pesanan.toggle-wa', ['id' => $order->id, 'type' => 2]) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-full transition shadow-sm border {{ $order->wa_sent_2 ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100' }}" title="WA Ambil">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M96 32C126.9 32 152 57.1 152 88C152 118.9 126.9 144 96 144C65.1 144 40 118.9 40 88C40 57.1 65.1 32 96 32zM32 235.1C32 202.5 58.5 176 91.1 176C114.6 176 136.6 187.3 150.2 206.4L198.9 274.6C204.7 282.8 214 287.7 224 288L224 192C224 174.3 238.3 160 256 160L384 160C401.7 160 416 174.3 416 192L416 288C426 287.7 435.3 282.8 441.1 274.6L489.8 206.4C503.4 187.3 525.4 176 548.9 176C581.5 176 608 202.5 608 235.1L608 336C608 366.2 593.8 394.7 569.6 412.8L492.8 470.4C484.7 476.4 480 485.9 480 496L480 576C480 593.7 465.7 608 448 608C430.3 608 416 593.7 416 576L416 496C416 465.8 430.2 437.3 454.4 419.2L496 388L496 307.9L493.2 311.8C475.2 337 446.1 352 415.1 352L384 352C383.4 352 382.7 352 382.1 351.9C381.5 351.9 380.8 352 380.2 352L259.8 352C259.2 352 258.5 352 257.9 351.9C257.3 351.9 256.6 352 256 352L224.9 352C193.9 352 164.8 337 146.8 311.8L144 307.9L144 388L185.6 419.2C209.8 437.3 224 465.8 224 496L224 576C224 593.7 209.7 608 192 608C174.3 608 160 593.7 160 576L160 496C160 485.9 155.3 476.4 147.2 470.4L70.4 412.8C46.2 394.7 32 366.2 32 336L32 235.1zM32 443.3C35.1 446 38.3 448.7 41.6 451.2L96 492L96 576C96 593.7 81.7 608 64 608C46.3 608 32 593.7 32 576L32 443.3zM600 88C600 118.9 574.9 144 544 144C513.1 144 488 118.9 488 88C488 57.1 513.1 32 544 32C574.9 32 600 57.1 600 88zM608 576C608 593.7 593.7 608 576 608C558.3 608 544 593.7 544 576L544 492L598.4 451.2C601.7 448.7 604.9 446.1 608 443.3L608 576z"/>
-                                        </svg>
-                                    </button>
-                                </form>
+                                <button type="button" onclick="toggleWa('{{ $order->id }}', '2')" class="w-8 h-8 flex items-center justify-center rounded-full transition shadow-sm border {{ $order->wa_sent_2 ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100' }}" title="WA Ambil">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M96 32C126.9 32 152 57.1 152 88C152 118.9 126.9 144 96 144C65.1 144 40 118.9 40 88C40 57.1 65.1 32 96 32zM32 235.1C32 202.5 58.5 176 91.1 176C114.6 176 136.6 187.3 150.2 206.4L198.9 274.6C204.7 282.8 214 287.7 224 288L224 192C224 174.3 238.3 160 256 160L384 160C401.7 160 416 174.3 416 192L416 288C426 287.7 435.3 282.8 441.1 274.6L489.8 206.4C503.4 187.3 525.4 176 548.9 176C581.5 176 608 202.5 608 235.1L608 336C608 366.2 593.8 394.7 569.6 412.8L492.8 470.4C484.7 476.4 480 485.9 480 496L480 576C480 593.7 465.7 608 448 608C430.3 608 416 593.7 416 576L416 496C416 465.8 430.2 437.3 454.4 419.2L496 388L496 307.9L493.2 311.8C475.2 337 446.1 352 415.1 352L384 352C383.4 352 382.7 352 382.1 351.9C381.5 351.9 380.8 352 380.2 352L259.8 352C259.2 352 258.5 352 257.9 351.9C257.3 351.9 256.6 352 256 352L224.9 352C193.9 352 164.8 337 146.8 311.8L144 307.9L144 388L185.6 419.2C209.8 437.3 224 465.8 224 496L224 576C224 593.7 209.7 608 192 608C174.3 608 160 593.7 160 576L160 496C160 485.9 155.3 476.4 147.2 470.4L70.4 412.8C46.2 394.7 32 366.2 32 336L32 235.1zM32 443.3C35.1 446 38.3 448.7 41.6 451.2L96 492L96 576C96 593.7 81.7 608 64 608C46.3 608 32 593.7 32 576L32 443.3zM600 88C600 118.9 574.9 144 544 144C513.1 144 488 118.9 488 88C488 57.1 513.1 32 544 32C574.9 32 600 57.1 600 88zM608 576C608 593.7 593.7 608 576 608C558.3 608 544 593.7 544 576L544 492L598.4 451.2C601.7 448.7 604.9 446.1 608 443.3L608 576z"/>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -268,12 +262,9 @@
                 {{-- Tombol Aksi Mobile (Grid Besar) --}}
                 <div class="grid grid-cols-4 gap-2">
                     {{-- WA Masuk --}}
-                    <form action="{{ route('pesanan.toggle-wa', ['id' => $order->id, 'type' => 1]) }}" method="POST" class="col-span-1">
-                        @csrf
-                        <button type="submit" class="w-full h-10 flex items-center justify-center rounded-xl border {{ $order->wa_sent_1 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-400 border-gray-200' }} active:scale-95 transition">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        </button>
-                    </form>
+                    <button type="button" onclick="toggleWa('{{ $order->id }}', '1')" class="col-span-1 w-full h-10 flex items-center justify-center rounded-xl border {{ $order->wa_sent_1 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-400 border-gray-200' }} active:scale-95 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    </button>
 
                     {{-- Edit (Tombol Utama) --}}
                     <a href="{{ route('pesanan.show', $order->id) }}" class="col-span-2 h-10 flex items-center justify-center gap-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-200 active:bg-blue-700 active:scale-95 transition">
@@ -281,14 +272,11 @@
                     </a>
 
                     {{-- WA Ambil --}}
-                    <form action="{{ route('pesanan.toggle-wa', ['id' => $order->id, 'type' => 2]) }}" method="POST" class="col-span-1">
-                        @csrf
-                        <button type="submit" class="w-full h-10 flex items-center justify-center rounded-xl border {{ $order->wa_sent_2 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-400 border-gray-200' }} active:scale-95 transition">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M96 32C126.9 32 152 57.1 152 88C152 118.9 126.9 144 96 144C65.1 144 40 118.9 40 88C40 57.1 65.1 32 96 32zM32 235.1C32 202.5 58.5 176 91.1 176C114.6 176 136.6 187.3 150.2 206.4L198.9 274.6C204.7 282.8 214 287.7 224 288L224 192C224 174.3 238.3 160 256 160L384 160C401.7 160 416 174.3 416 192L416 288C426 287.7 435.3 282.8 441.1 274.6L489.8 206.4C503.4 187.3 525.4 176 548.9 176C581.5 176 608 202.5 608 235.1L608 336C608 366.2 593.8 394.7 569.6 412.8L492.8 470.4C484.7 476.4 480 485.9 480 496L480 576C480 593.7 465.7 608 448 608C430.3 608 416 593.7 416 576L416 496C416 465.8 430.2 437.3 454.4 419.2L496 388L496 307.9L493.2 311.8C475.2 337 446.1 352 415.1 352L384 352C383.4 352 382.7 352 382.1 351.9C381.5 351.9 380.8 352 380.2 352L259.8 352C259.2 352 258.5 352 257.9 351.9C257.3 351.9 256.6 352 256 352L224.9 352C193.9 352 164.8 337 146.8 311.8L144 307.9L144 388L185.6 419.2C209.8 437.3 224 465.8 224 496L224 576C224 593.7 209.7 608 192 608C174.3 608 160 593.7 160 576L160 496C160 485.9 155.3 476.4 147.2 470.4L70.4 412.8C46.2 394.7 32 366.2 32 336L32 235.1zM32 443.3C35.1 446 38.3 448.7 41.6 451.2L96 492L96 576C96 593.7 81.7 608 64 608C46.3 608 32 593.7 32 576L32 443.3zM600 88C600 118.9 574.9 144 544 144C513.1 144 488 118.9 488 88C488 57.1 513.1 32 544 32C574.9 32 600 57.1 600 88zM608 576C608 593.7 593.7 608 576 608C558.3 608 544 593.7 544 576L544 492L598.4 451.2C601.7 448.7 604.9 446.1 608 443.3L608 576z"/>
-                            </svg>
-                        </button>
-                    </form>
+                    <button type="button" onclick="toggleWa('{{ $order->id }}', '2')" class="col-span-1 w-full h-10 flex items-center justify-center rounded-xl border {{ $order->wa_sent_2 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-400 border-gray-200' }} active:scale-95 transition">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M96 32C126.9 32 152 57.1 152 88C152 118.9 126.9 144 96 144C65.1 144 40 118.9 40 88C40 57.1 65.1 32 96 32zM32 235.1C32 202.5 58.5 176 91.1 176C114.6 176 136.6 187.3 150.2 206.4L198.9 274.6C204.7 282.8 214 287.7 224 288L224 192C224 174.3 238.3 160 256 160L384 160C401.7 160 416 174.3 416 192L416 288C426 287.7 435.3 282.8 441.1 274.6L489.8 206.4C503.4 187.3 525.4 176 548.9 176C581.5 176 608 202.5 608 235.1L608 336C608 366.2 593.8 394.7 569.6 412.8L492.8 470.4C484.7 476.4 480 485.9 480 496L480 576C480 593.7 465.7 608 448 608C430.3 608 416 593.7 416 576L416 496C416 465.8 430.2 437.3 454.4 419.2L496 388L496 307.9L493.2 311.8C475.2 337 446.1 352 415.1 352L384 352C383.4 352 382.7 352 382.1 351.9C381.5 351.9 380.8 352 380.2 352L259.8 352C259.2 352 258.5 352 257.9 351.9C257.3 351.9 256.6 352 256 352L224.9 352C193.9 352 164.8 337 146.8 311.8L144 307.9L144 388L185.6 419.2C209.8 437.3 224 465.8 224 496L224 576C224 593.7 209.7 608 192 608C174.3 608 160 593.7 160 576L160 496C160 485.9 155.3 476.4 147.2 470.4L70.4 412.8C46.2 394.7 32 366.2 32 336L32 235.1zM32 443.3C35.1 446 38.3 448.7 41.6 451.2L96 492L96 576C96 593.7 81.7 608 64 608C46.3 608 32 593.7 32 576L32 443.3zM600 88C600 118.9 574.9 144 544 144C513.1 144 488 118.9 488 88C488 57.1 513.1 32 544 32C574.9 32 600 57.1 600 88zM608 576C608 593.7 593.7 608 576 608C558.3 608 544 593.7 544 576L544 492L598.4 451.2C601.7 448.7 604.9 446.1 608 443.3L608 576z"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
