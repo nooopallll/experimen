@@ -172,6 +172,8 @@
                     } else {
                         location.reload();
                     }
+                } else if (data.status === 'error') {
+                    alert(data.message);
                 }
             })
             .catch(error => {

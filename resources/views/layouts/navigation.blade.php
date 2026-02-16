@@ -28,7 +28,7 @@
                     
                     @if(auth()->user()->role === 'owner')
                         <x-nav-link :href="route('owner.settings.index')" :active="request()->routeIs('owner.settings.index')">
-                            {{ __('Manajemen Diskon') }}
+                            {{ __('Pengaturan') }}
                         </x-nav-link>
                     @endif
 
@@ -41,6 +41,22 @@
 
             {{-- BAGIAN KANAN: Dropdown Profil User --}}
             <div class="flex items-center">
+                {{-- Tombol Fullscreen --}}
+                <button x-data="{ isFullscreen: false }"
+                        x-init="isFullscreen = !!document.fullscreenElement; document.addEventListener('fullscreenchange', () => { isFullscreen = !!document.fullscreenElement })"
+                        @click="document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()" 
+                        class="p-2 mr-2 text-gray-400 hover:text-gray-500 focus:outline-none transition duration-150 ease-in-out"
+                        :title="isFullscreen ? 'Keluar Fullscreen' : 'Masuk Fullscreen'">
+                    {{-- Icon Enter --}}
+                    <svg x-show="!isFullscreen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                    </svg>
+                    {{-- Icon Exit --}}
+                    <svg x-show="isFullscreen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="display: none;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 4.5v3m0 0h3m-3 0l-5-5M15 4.5v3m0 0h-3m3 0l5-5M9 19.5v-3m0 0h3m-3 0l-5 5M15 19.5v-3m0 0h-3m3 0l5 5" />
+                    </svg>
+                </button>
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">

@@ -1,0 +1,17 @@
+{
+    "name": "Louwes App",
+    "short_name": "Louwes",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#003d4d",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/assets/icons/pickup.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

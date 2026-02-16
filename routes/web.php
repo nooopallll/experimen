@@ -102,6 +102,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/order-details/{id}/status', [OrderDetailController::class, 'updateStatus'])->name('order-details.update-status');
     // Tambahkan di dalam group middleware ['auth', 'verified']
     Route::get('/orders/{id}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
+    
+    // Route Print LAN (Backend Socket)
+    Route::post('/orders/{id}/print-lan', [OrderController::class, 'printLan'])->name('orders.print-lan');
 
     Route::get('/kebutuhan', [KebutuhanController::class, 'index'])->name('kebutuhan.index');
     Route::post('/kebutuhan/store', [KebutuhanController::class, 'store'])->name('kebutuhan.store');
@@ -128,5 +131,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/owner/settings', [SettingController::class, 'index'])->name('owner.settings.index');
     Route::post('/owner/settings', [SettingController::class, 'update'])->name('owner.settings.update');
     });
+
+// Route Publik untuk Share Invoice (Bisa diakses tanpa login)
+Route::get('/invoice/view/{id}', [OrderController::class, 'publicInvoice'])->name('invoice.public');
 
 require __DIR__.'/auth.php';

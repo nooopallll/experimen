@@ -368,6 +368,7 @@ class OrderController extends Controller
         }
     }
 
+    // LOGIKA UNTUK TOGGLE STATUS WA SENT (WA SENT 1 = Invoice, WA SENT 2 = Pengambilan)
     public function toggleWa(Request $request, $id, $type)
     {
         $order = Order::with(['customer', 'details'])->findOrFail($id);
@@ -382,20 +383,44 @@ class OrderController extends Controller
         }
 
         if ($type == '1') {
+            // VALIDASI: Hanya kirim jika SEMUA item berstatus 'Proses'
+            // Mengantisipasi salah klik jika pesanan sudah berjalan/selesai
+            $nonProsesCount = $order->details->where('status', '!=', 'Proses')->count();
+            if ($nonProsesCount > 0) {
+                if ($request->ajax()) {
+                    return response()->json(['status' => 'error', 'message' => 'WA Sent 1 hanya bisa dikirim jika semua item berstatus PROSES.']);
+                }
+                return back()->with('error', 'Gagal: Ada item yang bukan status Proses.');
+            }
+
             $order->wa_sent_1 = !$order->wa_sent_1;
             
             // Jika status berubah jadi TERKIRIM (True), buat link WA Invoice
             if ($order->wa_sent_1 && $phone) {
-                $items = $order->details->map(fn($d) => $d->nama_barang)->join(', ');
                 $total = number_format($order->total_harga, 0, ',', '.');
+                // Format detail per item (Item, Treatment, Status baris sendiri-sendiri)
+                $detailsList = $order->details->map(fn($d) => "Item: *{$d->nama_barang}*\nTreatment: {$d->layanan}\nStatus: {$d->status}" . ($d->catatan ? "\nKondisi: {$d->catatan}" : ""))->join("\n\n");
+                // Generate Link Publik
+                // $linkInvoice = route('invoice.public', $order->id);
                 
-                $msg = "Halo Kak *{$customer->nama}*,\n\n";
-                $msg .= "Terima kasih telah mempercayakan sepatu kakak di *Louwes Care*.\n";
+                // Logika Status Pembayaran
+                $infoBayar = "Status Pembayaran: *{$order->status_pembayaran}*";
+                if ($order->status_pembayaran == 'Lunas') {
+                    $infoBayar = "Status Pembayaran: *LUNAS*";
+                } elseif ($order->status_pembayaran == 'DP') {
+                    $dp = number_format($order->paid_amount, 0, ',', '.');
+                    $sisa = number_format($order->total_harga - $order->paid_amount, 0, ',', '.');
+                    $infoBayar = "Status Pembayaran: *DP (Rp {$dp})*\nSisa Tagihan: *Rp {$sisa}*";
+                }
+
+                $msg = "Halo Kak *{$customer->nama}*,\n";
                 $msg .= "No Nota: *{$order->no_invoice}*\n";
-                $msg .= "Item: {$items}\n";
-                $msg .= "Total: *Rp {$total}*\n\n";
-                $msg .= "Simpan pesan ini sebagai bukti pengambilan ya kak! 👟✨";
-                
+                $msg .= "\n{$detailsList}\n\n";
+                $msg .= "Total Harga: *Rp {$total}*\n";
+                $msg .= "{$infoBayar}\n\n";
+                // $msg .= "*Link Nota Digital (Download PDF):*\n{$linkInvoice}\n\n";
+                $msg .= "Mohon save nomor kami untuk memudahkan komunikasi ya kak. Terima kasih telah mempercayakan sepatu kakak di Louwes Shoes Care.\n";
+                $msg .= "Simpan pesan ini sebagai bukti pengambilan ya kak!!";
                 $waUrl = "https://wa.me/{$phone}?text=" . urlencode($msg);
             }
 
@@ -404,9 +429,59 @@ class OrderController extends Controller
 
             // Jika status berubah jadi TERKIRIM (True), buat link WA Pengambilan
             if ($order->wa_sent_2 && $phone) {
-                $msg = "Halo Kak *{$customer->nama}*,\n\n";
-                $msg .= "Sepatu kakak dengan No Nota: *{$order->no_invoice}* sudah *SELESAI* diproses dan bisa diambil di outlet Louwes Care.\n\n";
-                $msg .= "Kami tunggu kedatangannya ya! 🙌";
+                  $total = number_format($order->total_harga, 0, ',', '.');
+                
+                // Cek Status Kelengkapan Item
+                $finishedCount = $order->details->where('status', 'Selesai')->count();
+                $processCount = $order->details->where('status', 'Proses')->count();
+                $pickedUpCount = $order->details->where('status', 'Diambil')->count();
+
+                // Format detail per item (Item, Treatment, Status baris sendiri-sendiri)
+                $detailsList = $order->details->map(fn($d) => "Item: *{$d->nama_barang}*\nTreatment: {$d->layanan}\nStatus: {$d->status}" . ($d->catatan ? "\nKondisi: {$d->catatan}" : ""))->join("\n\n");
+                // Generate Link Publik
+                // $linkInvoice = route('invoice.public', $order->id);
+                
+                // Logika Status Pembayaran
+                $infoBayar = "Status Pembayaran: *{$order->status_pembayaran}*";
+                if ($order->status_pembayaran == 'Lunas') {
+                    $infoBayar = "Status Pembayaran: *LUNAS*";
+                } elseif ($order->status_pembayaran == 'DP') {
+                    $dp = number_format($order->paid_amount, 0, ',', '.');
+                    $sisa = number_format($order->total_harga - $order->paid_amount, 0, ',', '.');
+                    $infoBayar = "Status Pembayaran: *DP (Rp {$dp})*\nSisa Tagihan: *Rp {$sisa}*";
+                }
+                
+                $msg = "Halo Kak *{$customer->nama}*,\n";
+                
+                // LOGIKA PESAN DINAMIS (PARSIAL VS FULL)
+                if ($pickedUpCount > 0) {
+                    // KASUS: Sudah ada yang diambil sebelumnya (Ambil Sebagian)
+                    if ($finishedCount > 0) {
+                        $msg .= "Menginfokan sisa pesanan No Nota: *{$order->no_invoice}* sudah selesai dan siap diambil ya kak.\n\n";
+                    } else {
+                        $msg .= "Update status pesanan No Nota: *{$order->no_invoice}*.\n\n";
+                    }
+                    $msg .= "{$detailsList}\n\n";
+                    
+                    if ($processCount > 0) {
+                         $msg .= "Mohon ditunggu untuk item yang masih diproses ya kak.\n\n";
+                    }
+                } elseif ($processCount > 0 && $finishedCount > 0) {
+                    // KASUS: Sebagian Selesai, Sebagian Belum (Belum ada yang diambil sama sekali)
+                    $msg .= "Menginfokan update pesanan No Nota: *{$order->no_invoice}*\n\n";
+                    $msg .= "{$detailsList}\n\n";
+                    $msg .= "Saat ini *sebagian sepatu sudah selesai*, namun ada yang masih dalam proses pengerjaan.\n";
+                    $msg .= "Apakah yang sudah selesai ingin diambil duluan atau menunggu sekalian selesai semua kak?\n\n";
+                } else {
+                    // KASUS: Semua Selesai (Standard)
+                    $msg .= "Kabar gembira! Pesanan Kakak dengan No Nota: *{$order->no_invoice}* sudah selesai dan siap diambil.\n\n";
+                    $msg .= "{$detailsList}\n\n";
+                }
+
+                $msg .= "Total Harga: *Rp {$total}*\n";
+                $msg .= "{$infoBayar}\n\n";
+                // $msg .= "*Link Nota Digital (Download PDF):*\n{$linkInvoice}\n\n";
+                $msg .= "Mohon save nomor kami untuk mempermudah komunikasi ya kak. Terima kasih telah mempercayakan sepatu kakak di *Louwes Care*.\n";
                 
                 $waUrl = "https://wa.me/{$phone}?text=" . urlencode($msg);
             }
@@ -498,5 +573,78 @@ class OrderController extends Controller
         $karyawans = Karyawan::orderBy('nama_karyawan', 'asc')->get();
         $nominalDiskon = Setting::getDiskonMember();
         return view('pesanan.show', compact('order', 'treatments', 'karyawans', 'nominalDiskon'));
+    }
+
+    /**
+     * CETAK STRUK VIA LAN / WIFI (Backend Socket)
+     */
+    public function printLan(Request $request, $id)
+    {
+        // Validasi Input dari Frontend
+        $request->validate([
+            'ip' => 'required',
+            'port' => 'required',
+        ]);
+
+        $order = Order::with(['customer', 'details'])->findOrFail($id);
+        
+        $ip = $request->input('ip');
+        $port = $request->input('port');
+        $headerText = $request->input('header_text', 'LOUWES CARE');
+        $footerText = $request->input('footer_text', 'Terima Kasih');
+
+        try {
+            // 1. Buka koneksi socket ke printer (Timeout 3 detik)
+            $connector = fsockopen($ip, $port, $errno, $errstr, 3);
+            
+            if (!$connector) {
+                return response()->json(['status' => 'error', 'message' => "Gagal koneksi ke printer: $errstr ($errno)"], 500);
+            }
+
+            // 2. Susun Perintah ESC/POS
+            $esc = "\x1b";
+            $gs = "\x1d";
+            $init = $esc . "@";
+            $center = $esc . "a" . "\x01";
+            $left = $esc . "a" . "\x00";
+
+            $data = $init;
+            $data .= $center . $headerText . "\n";
+            $data .= "--------------------------------\n";
+            $data .= $left;
+            $data .= "No Nota : " . $order->no_invoice . "\n";
+            $data .= "Tgl     : " . $order->created_at->format('d/m/Y H:i') . "\n";
+            $data .= "Plg     : " . ($order->customer ? $order->customer->nama : 'Guest') . "\n";
+            $data .= "--------------------------------\n";
+
+            foreach ($order->details as $item) {
+                $data .= $item->nama_barang . "\n";
+                $data .= "   " . $item->layanan . " : Rp " . number_format($item->harga, 0, ',', '.') . "\n";
+            }
+
+            $data .= "--------------------------------\n";
+            $data .= "TOTAL   : Rp " . number_format($order->total_harga, 0, ',', '.') . "\n";
+            $data .= "--------------------------------\n";
+            $data .= $center . $footerText . "\n\n\n\n"; // Feed lines agar kertas keluar
+
+            // 3. Kirim Data & Tutup Koneksi
+            fwrite($connector, $data);
+            fclose($connector);
+
+            return response()->json(['status' => 'success', 'message' => 'Struk berhasil dikirim ke printer.']);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * HALAMAN PUBLIC INVOICE (Untuk Share WA)
+     */
+    public function publicInvoice($id)
+    {
+        // Ambil data order (Tanpa auth check karena public)
+        $order = Order::with(['customer', 'details'])->findOrFail($id);
+        return view('pesanan.public_invoice', compact('order'));
     }
 }

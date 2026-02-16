@@ -13,10 +13,24 @@ class OrderDetailController extends Controller
         $detail = OrderDetail::findOrFail($id);
         $detail->update(['status' => $request->status]);
 
-        // Opsional: Cek jika SEMUA detail sudah selesai, update status Order Utama jadi 'Selesai'
+        // PERBAIKAN: Cek ulang seluruh item untuk menentukan status Order Utama
         $order = $detail->order;
-        if ($order->details()->where('status', '!=', 'Selesai')->count() == 0) {
-            $order->update(['status_order' => 'Selesai']);
+        
+        $totalDetails = $order->details()->count();
+        $unfinishedItems = $order->details()->whereNotIn('status', ['Selesai', 'Diambil'])->count();
+        $pickedUpItems = $order->details()->where('status', 'Diambil')->count();
+
+        if ($totalDetails > 0) {
+            if ($unfinishedItems > 0) {
+                // Jika masih ada 1 saja item yang 'Proses', Order Utama TETAP 'Proses'
+                $order->status_order = 'Proses';
+            } elseif ($pickedUpItems == $totalDetails) {
+                $order->status_order = 'Diambil';
+            } else {
+                // Jika semua item 'Selesai' (atau kombinasi Selesai & Diambil)
+                $order->status_order = 'Selesai';
+            }
+            $order->save();
         }
 
         return back()->with('success', 'Status item berhasil diperbarui!');

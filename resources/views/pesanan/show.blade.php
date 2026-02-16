@@ -528,9 +528,14 @@
 
         // 3. PRINT WINDOW
         window.printInvoice = function() {
+            // Ambil No Invoice dan Nama Customer untuk nama file saat Save as PDF
+            var invNo = $('#inv-no').text().trim();
+            var custName = $('#inv-cust-name').text().trim();
+            var fileName = invNo + ' - ' + custName;
+
             var content = document.getElementById('invoice-content').innerHTML;
             var mywindow = window.open('', 'PRINT', 'height=600,width=400');
-            mywindow.document.write('<html><head><title>Invoice</title>');
+            mywindow.document.write('<html><head><title>' + fileName + '</title>');
             mywindow.document.write(`
                 <style>
                     body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 12px; margin: 0; padding: 10px; color: #000; }
