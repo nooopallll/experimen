@@ -20,19 +20,17 @@
     {{-- WRAPPER UTAMA DENGAN ALPINE JS --}}
     <div id="main-app" class="py-12"
          x-data="{ 
-            // DATA STATE
-            claimStatus: '{{ $order->klaim }}', // Data dari DB
-            claimType: '',      // Pilihan user saat ini
-            tempReward: 'diskon', // Pilihan sementara modal
-            isModalOpen: false,   // Kontrol modal
+            claimStatus: '{{ $order->klaim }}', 
+            claimType: '',      
+            tempReward: 'diskon', 
+            isModalOpen: false,   
             
-            // STATE PEMBAYARAN
             isPaymentModalOpen: false,
             paymentMethod: '{{ $order->metode_pembayaran ?? 'Tunai' }}',
             newStatusPembayaran: '{{ $order->status_pembayaran }}',
             payInput: '',
+            submitPaidAmount: {{ $order->paid_amount ?? 0 }},
 
-            // --- LOGIKA MODAL ---
             openModal() { this.isModalOpen = true; },
             closeModal() { this.isModalOpen = false; },
             applyReward() {
@@ -40,7 +38,6 @@
                 this.closeModal();
             },
             
-            // --- LOGIKA MODAL PEMBAYARAN ---
             openPaymentModal() {
                 this.isPaymentModalOpen = true;
                 this.paymentMethod = 'Tunai';
@@ -50,7 +47,18 @@
                 this.isPaymentModalOpen = false;
             },
             confirmPayment() {
-                this.newStatusPembayaran = 'Lunas';
+                let inputVal = parseInt(this.payInput.replace(/\./g, '')) || 0;
+                let paymentNow = inputVal === 0 ? this.remainingBill : inputVal;
+                let totalPaid = this.paidAmount + paymentNow;
+
+                if (totalPaid >= this.finalBill) {
+                    this.newStatusPembayaran = 'Lunas';
+                    this.submitPaidAmount = this.finalBill;
+                } else {
+                    this.newStatusPembayaran = 'DP';
+                    this.submitPaidAmount = totalPaid;
+                }
+
                 this.closePaymentModal();
                 // Beri jeda sedikit agar x-model update sebelum submit
                 setTimeout(() => window.updateOrder(true), 100);
@@ -60,7 +68,6 @@
                 return Math.max(0, pay - this.remainingBill);
             },
 
-            // --- LOGIKA HARGA ---
             totalPrice: 0, 
             paidAmount: {{ $order->paid_amount ?? 0 }},
             get discount() { 
@@ -112,6 +119,7 @@
                 <input type="hidden" name="catatan" value="{{ $order->catatan }}">
                 <input type="hidden" name="metode_pembayaran" x-model="paymentMethod">
                 <input type="hidden" name="status_pembayaran" x-model="newStatusPembayaran">
+                <input type="hidden" name="paid_amount" x-model="submitPaidAmount">
 
                 {{-- HEADER 1: Data Pelanggan & Status Info --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -141,7 +149,7 @@
                                         <div><dt class="text-blue-600 text-xs font-bold uppercase">Poin Member</dt><dd class="text-lg font-black text-gray-800">{{ $order->customer->member->poin }}/8</dd></div>
                                         
                                         {{-- Tombol Muncul via Alpine --}}
-                                        <template x-if="!claimStatus && !claimType && {{ $order->customer->member->poin }} >= 8">
+                                        <template x-if="(!claimStatus || claimStatus == '0') && !claimType && {{ $order->customer->member->poin ?? 0 }} >= 8 && {{ \App\Models\Order::where('customer_id', $order->customer_id)->count() }} > 1">
                                             <button type="button" @click="openModal()" class="bg-green-600 hover:bg-green-700 text-white text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded shadow-sm transition">Claim Reward</button>
                                         </template>
                                         
@@ -184,7 +192,10 @@
                                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                                         <thead class="bg-gray-50">
                                             <tr>
-                                                <th class="px-3 py-3 text-left font-bold text-gray-600 w-1/3">Item / Barang</th>
+                                                <th class="px-3 py-3 text-center font-bold text-gray-600 w-[5%]">
+                                                    <input type="checkbox" onclick="toggleSelectAll(this)" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" title="Pilih Semua">
+                                                </th>
+                                                <th class="px-3 py-3 text-left font-bold text-gray-600 w-[30%]">Item / Barang</th>
                                                 <th class="px-3 py-3 text-left font-bold text-gray-600 w-1/4">Layanan</th>
                                                 <th class="px-3 py-3 text-left font-bold text-gray-600 w-[15%]">Est. Keluar</th>
                                                 <th class="px-3 py-3 text-center font-bold text-gray-600 w-[10%]">Status</th>
@@ -192,12 +203,31 @@
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-100">
-                                            @foreach($order->details as $item)
+                                            @php
+                                                $groupedDetails = $order->details->groupBy(function($item) {
+                                                    return strtolower(trim($item->nama_barang));
+                                                });
+                                            @endphp
+                                            @foreach($groupedDetails as $groupName => $details)
+                                            @php
+                                                $groupTotalPrice = $details->sum('harga');
+                                                $groupIds = $details->pluck('id')->implode(',');
+                                            @endphp
+                                            @foreach($details as $index => $item)
                                             <tr class="hover:bg-blue-50/30 transition-colors">
-                                                <td class="p-2">
-                                                    <input type="text" name="item[]" value="{{ $item->nama_barang }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm font-bold text-gray-900">
-                                                    <input type="text" name="catatan_detail[]" value="{{ $item->catatan }}" class="w-full px-2 py-1 mt-1 bg-white border border-gray-200 rounded text-xs text-gray-500" placeholder="Catatan item...">
+                                                @if($index === 0)
+                                                <td class="p-2 text-center align-top pt-3" rowspan="{{ count($details) }}">
+                                                    <input type="checkbox" name="selected_items[]" value="{{ $groupIds }}" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                                 </td>
+                                                <td class="p-2 align-top" rowspan="{{ count($details) }}">
+                                                    <input type="text" name="item[]" value="{{ $item->nama_barang }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm font-bold text-gray-900 group-item-{{ $loop->parent->index }}" oninput="syncInputs('group-item-{{ $loop->parent->index }}', this.value)">
+                                                    <input type="text" name="catatan_detail[]" value="{{ $item->catatan }}" class="w-full px-2 py-1 mt-1 bg-white border border-gray-200 rounded text-xs text-gray-500 group-catatan-{{ $loop->parent->index }}" placeholder="Catatan item..." oninput="syncInputs('group-catatan-{{ $loop->parent->index }}', this.value)">
+                                                </td>
+                                                @else
+                                                        <input type="hidden" name="item[]" value="{{ $item->nama_barang }}" class="group-item-{{ $loop->parent->index }}">
+                                                        <input type="hidden" name="catatan_detail[]" value="{{ $item->catatan }}" class="group-catatan-{{ $loop->parent->index }}">
+                                                @endif
+
                                                 <td class="p-2 align-top">
                                                     <select name="kategori_treatment[]" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm cursor-pointer">
                                                         @foreach($treatments as $t)
@@ -205,18 +235,28 @@
                                                         @endforeach
                                                     </select>
                                                 </td>
-                                                <td class="p-2 align-top"><input type="date" name="tanggal_keluar[]" value="{{ $item->estimasi_keluar ? \Carbon\Carbon::parse($item->estimasi_keluar)->format('Y-m-d') : '' }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs"></td>
-                                                <td class="p-2 align-top">
-                                                    <select name="status_detail[]" class="w-full px-1 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-semibold">
+
+                                                @if($index === 0)
+                                                <td class="p-2 align-top" rowspan="{{ count($details) }}">
+                                                    <input type="date" name="tanggal_keluar[]" value="{{ $item->estimasi_keluar ? \Carbon\Carbon::parse($item->estimasi_keluar)->format('Y-m-d') : '' }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs" onchange="syncInputs('group-date-{{ $loop->parent->index }}', this.value)">
+                                                </td>
+                                                <td class="p-2 align-top" rowspan="{{ count($details) }}">
+                                                    <select name="status_detail[]" class="w-full px-1 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-semibold" onchange="syncInputs('group-status-{{ $loop->parent->index }}', this.value)">
                                                         @foreach(['Proses','Selesai','Diambil'] as $s)
                                                             <option value="{{ $s }}" {{ $item->status == $s ? 'selected' : '' }}>{{ $s }}</option>
                                                         @endforeach
                                                     </select>
                                                 </td>
-                                                <td class="p-2 align-top">
-                                                    <input type="text" name="harga[]" value="{{ number_format($item->harga, 0, ',', '.') }}" class="input-harga w-full px-2 py-1 text-right bg-gray-50 border border-gray-200 rounded text-sm font-bold text-gray-800" oninput="formatRupiahInput(this); document.querySelector('#main-app').__x.$data.calculateUI()">
+                                                <td class="p-2 align-top" rowspan="{{ count($details) }}">
+                                                    <input type="text" name="harga[]" value="{{ number_format($groupTotalPrice, 0, ',', '.') }}" class="input-harga w-full px-2 py-1 text-right bg-gray-50 border border-gray-200 rounded text-sm font-bold text-gray-800" oninput="formatRupiahInput(this); document.querySelector('#main-app').__x.$data.calculateUI()">
                                                 </td>
+                                                @else
+                                                    <input type="hidden" name="tanggal_keluar[]" value="{{ $item->estimasi_keluar ? \Carbon\Carbon::parse($item->estimasi_keluar)->format('Y-m-d') : '' }}" class="group-date-{{ $loop->parent->index }}">
+                                                    <input type="hidden" name="status_detail[]" value="{{ $item->status }}" class="group-status-{{ $loop->parent->index }}">
+                                                    <input type="hidden" name="harga[]" value="0">
+                                                @endif
                                             </tr>
+                                            @endforeach
                                             @endforeach
                                         </tbody>
                                     </table>
@@ -242,14 +282,17 @@
                                 </div>
 
                                 <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
+                                    <button type="button" onclick="deleteSelectedItems()" class="inline-flex items-center px-6 py-3 bg-red-600 border border-transparent rounded-lg font-bold text-sm text-white hover:bg-red-700 transition">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Hapus
+                                    </button>
                                     <button type="button" onclick="window.updateOrder(false)" class="inline-flex items-center px-6 py-3 bg-gray-600 border border-transparent rounded-lg font-bold text-sm text-white hover:bg-gray-700 transition">Simpan</button>
                                     <button type="button" onclick="window.updateOrder(true)" class="inline-flex items-center px-6 py-3 bg-blue-600 border border-transparent rounded-lg font-bold text-sm text-white hover:bg-blue-700 shadow-md transition">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>Simpan & Cetak
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>Cetak
                                     </button>
                                     {{-- TOMBOL BAYAR LUNAS (Hanya muncul jika ada sisa tagihan) --}}
                                     <template x-if="remainingBill > 0">
-                                        <button type="button" @click="openPaymentModal()" class="inline-flex items-center px-6 py-3 bg-green-600 border border-transparent rounded-lg font-bold text-sm text-white hover:bg-green-700 shadow-md transition">
-                                            Bayar Lunas
+                                        <button type="button" @click="window.autoUpdateStatus(); openPaymentModal()" class="inline-flex items-center px-6 py-3 bg-green-600 border border-transparent rounded-lg font-bold text-sm text-white hover:bg-green-700 shadow-md transition">
+                                            Bayar
                                         </button>
                                     </template>
                                 </div>
@@ -318,7 +361,7 @@
                             <div class="relative"><span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold">Rp</span><input type="text" x-model="payInput" class="pl-10 block w-full rounded-lg border-gray-300 font-bold text-lg" placeholder="0" oninput="formatRupiahInput(this)"></div>
                             <div class="mt-3 flex justify-between items-center pt-3 border-t border-gray-200"><span class="text-sm text-gray-500 font-bold">Kembalian:</span><span class="font-black text-green-600 text-xl" x-text="formatRupiah(change)"></span></div>
                         </div>
-                        <div class="flex justify-end space-x-3"><button type="button" @click="closePaymentModal()" class="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold">Batal</button><button type="button" @click="confirmPayment()" class="px-6 py-2 bg-green-600 text-white rounded-lg font-bold shadow-lg hover:bg-green-700">PROSES LUNAS</button></div>
+                        <div class="flex justify-end space-x-3"><button type="button" @click="closePaymentModal()" class="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold">Batal</button><button type="button" @click="confirmPayment()" class="px-6 py-2 bg-green-600 text-white rounded-lg font-bold shadow-lg hover:bg-green-700">PROSES & CETAK</button></div>
                     </div>
                 </div>
             </div>
@@ -326,8 +369,8 @@
 
         {{-- MODAL INVOICE POPUP (Manual JS) --}}
         <div id="modal-invoice" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900 bg-opacity-90" style="display: none;">
-            <div class="bg-white p-0 rounded-lg shadow-2xl overflow-hidden max-w-2xl w-full mx-4 relative">
-                <div id="invoice-content" class="bg-white p-6 invoice-area text-xs leading-snug text-black">
+            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 relative flex flex-col max-h-[90vh]">
+                <div id="invoice-content" class="bg-white p-6 invoice-area text-xs leading-snug text-black overflow-y-auto">
                     <div class="text-center mb-2">
                         <div class="flex justify-center mb-2"><img src="https://via.placeholder.com/50" alt="Logo" class="h-12 w-12 rounded-full"></div>
                         <h2 class="text-xl font-bold tracking-widest uppercase mb-1">LOUWES CARE</h2>
@@ -428,6 +471,60 @@
     <script>
         var rupiahFormatter = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 });
 
+        window.autoUpdateStatus = function() {
+            let checkboxes = document.querySelectorAll('input[name="selected_items[]"]:checked');
+            checkboxes.forEach(cb => {
+                let row = cb.closest('tr');
+                let select = row.querySelector('select[name="status_detail[]"]');
+                if(select) {
+                    select.value = 'Diambil';
+                    select.dispatchEvent(new Event('change')); // Trigger event agar syncInputs berjalan
+                }
+            });
+        }
+
+        function syncInputs(className, value) {
+            document.querySelectorAll('.' + className).forEach(input => {
+                input.value = value;
+            });
+        }
+
+        function toggleSelectAll(source) {
+            let checkboxes = document.getElementsByName('selected_items[]');
+            for(let i=0; i<checkboxes.length; i++) {
+                checkboxes[i].checked = source.checked;
+            }
+        }
+
+        function deleteSelectedItems() {
+            let selected = [];
+            document.querySelectorAll('input[name="selected_items[]"]:checked').forEach(cb => {
+                cb.value.split(',').forEach(id => selected.push(id));
+            });
+            
+            if(selected.length === 0) {
+                alert('Pilih item yang akan dihapus terlebih dahulu.');
+                return;
+            }
+            
+            if(confirm('Yakin ingin menghapus ' + selected.length + ' item terpilih?')) {
+                $.ajax({
+                    url: "{{ route('pesanan.delete-items') }}",
+                    type: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        ids: selected
+                    },
+                    success: function(response) {
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        alert('Gagal menghapus item. Pastikan Route dan Controller sudah dibuat.');
+                    }
+                });
+            }
+        }
+
         // 1. UPDATE ORDER (AJAX)
         window.updateOrder = function(shouldPrint) {
             let csKeluar = document.getElementById('kasir_keluar').value;
@@ -478,19 +575,47 @@
             $('#inv-date').text(dateStr);
 
             let rows = '';
+            
+            // GROUPING LOGIC: Gabungkan item dengan nama yang sama
+            let groupedItems = {};
             order.details.forEach(item => {
+                let key = item.nama_barang.trim().toLowerCase();
+                if (!groupedItems[key]) {
+                    groupedItems[key] = {
+                        nama_barang: item.nama_barang,
+                        layanan: [],
+                        catatan: [],
+                        estimasi_keluar: item.estimasi_keluar,
+                        harga: 0
+                    };
+                }
+                groupedItems[key].layanan.push(item.layanan);
+                if (item.catatan && item.catatan !== '-' && item.catatan.trim() !== '') {
+                    groupedItems[key].catatan.push(item.catatan);
+                }
+                groupedItems[key].harga += parseInt(item.harga);
+                // Ambil tanggal estimasi paling akhir jika ada perbedaan
+                if (item.estimasi_keluar && (!groupedItems[key].estimasi_keluar || item.estimasi_keluar > groupedItems[key].estimasi_keluar)) {
+                    groupedItems[key].estimasi_keluar = item.estimasi_keluar;
+                }
+            });
+
+            Object.values(groupedItems).forEach(group => {
                 let estStr = '-';
-                if(item.estimasi_keluar) {
-                    let estDate = new Date(item.estimasi_keluar);
+                if(group.estimasi_keluar) {
+                    let estDate = new Date(group.estimasi_keluar);
                     estStr = estDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 }
-                let catatan = item.catatan ? item.catatan : '-';
+                
+                let layananStr = group.layanan.join(' + ');
+                let catatanStr = group.catatan.length > 0 ? group.catatan.join(', ') : '-';
 
                 rows += `<tr>
-                    <td class="align-top border-b border-gray-100 py-1 pr-1"><span class="font-bold">${item.nama_barang}</span></td>
-                    <td class="align-top border-b border-gray-100 py-1 text-[10px]">${item.layanan}</td>
+                    <td class="align-top border-b border-gray-100 py-1 pr-1"><span class="font-bold">${group.nama_barang}</span></td>
+                    <td class="align-top border-b border-gray-100 py-1 text-[10px]">${catatanStr}</td>
+                    <td class="align-top border-b border-gray-100 py-1 text-[10px]">${layananStr}</td>
                     <td class="align-top border-b border-gray-100 py-1 text-center text-[10px]">${estStr}</td>
-                    <td class="align-top border-b border-gray-100 py-1 text-right">${rupiahFormatter.format(item.harga)}</td>
+                    <td class="align-top border-b border-gray-100 py-1 text-right">${rupiahFormatter.format(group.harga)}</td>
                 </tr>`;
             });
             $('#inv-items-body').html(rows);
@@ -536,8 +661,8 @@
             var content = document.getElementById('invoice-content').innerHTML;
             var mywindow = window.open('', 'PRINT', 'height=600,width=400');
             mywindow.document.write('<html><head><title>' + fileName + '</title>');
+            mywindow.document.write('<style>');
             mywindow.document.write(`
-                <style>
                     body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 12px; margin: 0; padding: 10px; color: #000; }
                     .text-center { text-align: center; } .text-right { text-align: right; }
                     .font-bold { font-weight: bold; } .uppercase { text-transform: uppercase; }
@@ -551,8 +676,8 @@
                     .border-b { border-bottom: 1px solid #000; }
                     ul { padding-left: 15px; margin: 5px 0; }
                     .flex { display: flex; justify-content: space-between; align-items: flex-end; }
-                </style>
             `);
+            mywindow.document.write('</style>');
             mywindow.document.write('</head><body>');
             mywindow.document.write(content);
             mywindow.document.write('</body></html>');

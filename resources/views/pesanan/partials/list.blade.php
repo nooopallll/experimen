@@ -43,9 +43,15 @@
                         
                         {{-- SEPATU (LOGIKA POPUP LENGKAP) --}}
                         <td class="p-4 align-middle text-sm">
+                            @php
+                                // Hitung jumlah item unik berdasarkan nama barang
+                                $uniqueItemCount = $order->details->groupBy(function($item) {
+                                    return strtolower(trim($item->nama_barang));
+                                })->count();
+                            @endphp
                             @if($order->details->count() > 1)
                                 <div class="flex flex-col items-start gap-1">
-                                    <span class="font-bold text-gray-800">{{ $order->details->count() }} Pasang</span>
+                                    <span class="font-bold text-gray-800">{{ $uniqueItemCount > 1 ? $uniqueItemCount . ' Pasang' : $order->details->first()->nama_barang }}</span>
                                     <button onclick="openModal('modal-{{ $order->id }}')" 
                                         class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 cursor-pointer transition hover:underline">
                                         Lihat Rincian

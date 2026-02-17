@@ -98,7 +98,7 @@ class OrderController extends Controller
             // --- A. LOGIKA KLAIM POIN ---
             $klaimStatus = $order->klaim; 
             
-            if ($request->filled('claim_type') && is_null($order->klaim)) {
+            if ($request->filled('claim_type') && empty($order->klaim)) {
                 $member = $order->customer->member;
                 if ($member && $member->poin >= 8) {
                     $member->decrement('poin', 8); 
@@ -117,7 +117,7 @@ class OrderController extends Controller
             $staticDiscount = ($klaimStatus === 'Diskon') ? Setting::getDiskonMember() : 0;
 
             // --- B. UPDATE ORDER HEADER ---
-            $order->update([
+            $updateData = [
                 'nama_customer'     => $request->nama_customer, 
                 'status_order'      => $request->status, 
                 'kasir_keluar'      => $request->kasir_keluar, 
@@ -125,7 +125,13 @@ class OrderController extends Controller
                 'klaim'             => $klaimStatus, 
                 'metode_pembayaran' => $request->metode_pembayaran ?? $order->metode_pembayaran,
                 'status_pembayaran' => $request->status_pembayaran ?? $order->status_pembayaran,
-            ]);
+            ];
+
+            if ($request->filled('paid_amount')) {
+                $updateData['paid_amount'] = $request->paid_amount;
+            }
+
+            $order->update($updateData);
 
             // [LOGIKA BARU] Jika status diubah jadi Lunas, otomatis set paid_amount = total_harga
             if ($request->status_pembayaran == 'Lunas') {
@@ -559,5 +565,51 @@ class OrderController extends Controller
         }
 
         return response()->json(['found' => false]);
+    }
+
+    /**
+     * 7. HAPUS ITEM TERPILIH (AJAX)
+     */
+    public function deleteItems(Request $request)
+    {
+        $ids = $request->ids;
+        
+        if (empty($ids)) {
+            return response()->json(['status' => 'error', 'message' => 'Tidak ada item dipilih'], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Ambil salah satu item untuk mendapatkan Order parent-nya sebelum dihapus
+            $firstDetail = OrderDetail::whereIn('id', $ids)->first();
+            
+            if ($firstDetail) {
+                $order = $firstDetail->order;
+
+                // Hapus item yang dipilih
+                OrderDetail::whereIn('id', $ids)->delete();
+
+                // Hitung ulang total harga order
+                $subtotal = $order->details()->sum('harga');
+                $discount = ($order->klaim === 'Diskon') ? Setting::getDiskonMember() : 0;
+                
+                $order->total_harga = max(0, $subtotal - $discount);
+                
+                // Jika status Lunas, sesuaikan paid_amount agar sinkron
+                if ($order->status_pembayaran == 'Lunas') {
+                    $order->paid_amount = $order->total_harga;
+                }
+                
+                $order->save();
+            }
+
+            DB::commit();
+            return response()->json(['status' => 'success']);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
     }
 }

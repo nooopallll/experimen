@@ -79,6 +79,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route ini WAJIB ADA agar tombol "Simpan Perubahan" di pop-up berfungsi
     Route::patch('/pesanan/update/{id}', [OrderController::class, 'update'])->name('pesanan.update');
 
+    // Route untuk Hapus Item Terpilih
+    Route::post('/pesanan/delete-items', [OrderController::class, 'deleteItems'])->name('pesanan.delete-items');
+
     Route::post('/pesanan/{id}/toggle-wa/{type}', [OrderController::class, 'toggleWa'])->name('pesanan.toggle-wa');
 
     // Route ini untuk update status per-item (detail sepatu)
@@ -130,9 +133,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Manajemen Diskon (Owner)
     Route::get('/owner/settings', [SettingController::class, 'index'])->name('owner.settings.index');
     Route::post('/owner/settings', [SettingController::class, 'update'])->name('owner.settings.update');
-    });
-
-// Route Publik untuk Share Invoice (Bisa diakses tanpa login)
-Route::get('/invoice/view/{id}', [OrderController::class, 'publicInvoice'])->name('invoice.public');
+});
 
 require __DIR__.'/auth.php';
