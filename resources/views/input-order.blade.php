@@ -365,10 +365,8 @@
                             <div class="w-1/2">
                                 <p class="font-bold underline mb-1">NB (Syarat & Ketentuan):</p>
                                 <ul class="list-disc pl-3 leading-tight space-y-0.5">
-                                    <li>Pengambilan barang wajib menyertakan Nota asli.</li>
-                                    <li>Komplain maksimal 1x24 jam setelah barang diambil.</li>
-                                    <li>Barang yang tidak diambil lebih dari 30 hari, kerusakan/kehilangan di luar tanggung jawab kami.</li>
-                                    <li>Segala resiko luntur/susut karena sifat bahan sepatu, di luar tanggung jawab kami.</li>
+                                    <li>Barang rusak karena bahan sudah rapuh bukan tanggungjawab kami.</li>
+                                    <li>Apabila barang tidak diambil lebih dari 3 Bulan setelah jadi , hilang bukan tanggung jawab kami.</li>
                                 </ul>
                             </div>
                         </div>
