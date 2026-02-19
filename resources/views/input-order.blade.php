@@ -132,16 +132,26 @@
                                     </div>
                                 </div>
                             </div>
+
                             <div class="md:col-span-4">
                                 <label class="block text-[10px] font-bold text-gray-500 mb-1">Layanan</label>
-                                <div class="relative">
-                                    <select name="kategori_treatment[]" class="treatment-select w-full max-w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 pr-8 text-xs font-medium text-gray-800 cursor-pointer focus:ring-blue-500 appearance-none truncate" style="-webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: none !important;">
-                                        <option value="">Pilih Kategori Dulu</option>
-                                    </select>
-                                    <input type="text" name="kategori_treatment[]" class="treatment-input hidden w-full max-w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 text-xs font-medium text-gray-800 focus:ring-blue-500 placeholder-gray-400" placeholder="Ketik Manual..." disabled>
-                                    <div class="chevron-icon pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                
+                                <div class="flex gap-2 w-full">
+                                    
+                                    <div class="relative flex-1 min-w-0">
+                                        <select name="kategori_treatment[]" class="treatment-select w-full max-w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 pr-8 text-xs font-medium text-gray-800 cursor-pointer focus:ring-blue-500 appearance-none truncate" style="-webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: none !important;">
+                                            <option value="">Pilih Kategori Dulu</option>
+                                        </select>
+                                        <input type="text" name="kategori_treatment[]" class="treatment-input hidden w-full max-w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 text-xs font-medium text-gray-800 focus:ring-blue-500 placeholder-gray-400" placeholder="Ketik Manual..." disabled>
+                                        <div class="chevron-icon pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
                                     </div>
+
+                                    <div class="warna-container hidden flex-1 min-w-0 relative">
+                                        <input type="text" class="input-warna w-full max-w-full bg-gray-50 border border-gray-300 rounded-md p-1.5 text-xs font-medium text-gray-800 focus:ring-blue-500 placeholder-gray-400" placeholder="Pilih warna">
+                                    </div>
+
                                 </div>
                             </div>
                             
@@ -687,21 +697,63 @@
             calculateGlobalTotal();
         }
         
-        window.submitOrder = function() {
-            let formData = $('#orderForm').serialize();
-            $.ajax({
-                url: "{{ route('orders.store') }}", type: "POST", data: formData, dataType: 'json', headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
-                    if(response.status === 'success') {
-                        populateInvoice(response);
-                        window.closePaymentModal();
-                        document.getElementById('modal-invoice').style.display = 'flex';
-                        document.getElementById('modal-invoice').classList.remove('hidden');
-                    }
-                },
-                error: function(xhr) { alert("Gagal menyimpan: " + (xhr.responseJSON ? xhr.responseJSON.message : xhr.responseText)); }
-            });
+window.submitOrder = function() {
+    // --- 1. LOGIKA GABUNG TEKS (KATEGORI + LAYANAN + WARNA) ---
+    // Kita looping semua baris treatment, bukan cuma yang ada warnanya
+    $('.treatment-row').each(function() {
+        let row = $(this);
+        
+        // Ambil nama Kategori
+        let namaKategori = row.find('.category-select').val() || '';
+        
+        // Cari Layanan mana yang dipakai (Dropdown Select atau Input Custom)
+        let selectLayanan = row.find('select.treatment-select');
+        let inputLayanan = row.find('input.treatment-input');
+        let layananAktif = selectLayanan.is(':not(.hidden)') ? selectLayanan : inputLayanan;
+        let namaLayanan = layananAktif.val() || '';
+        
+        // Cari Warna (Jika input warna sedang tampil dan ada isinya)
+        let containerWarna = row.find('.warna-container');
+        let inputWarna = containerWarna.find('.input-warna').val() || '';
+        let teksWarna = (!containerWarna.hasClass('hidden') && inputWarna.trim() !== '') ? ' - Warna: ' + inputWarna : '';
+        
+        // Jika kategori dan layanan sudah diisi, kita gabungkan teksnya
+        if (namaKategori !== '' && namaLayanan !== '') {
+            let teksGabungan = namaKategori + ' - ' + namaLayanan + teksWarna;
+            
+            // Hapus input rahasia lama jika ada (mencegah data ganda kalau tombol diklik 2x)
+            row.find('.hidden-gabungan-layanan').remove();
+            
+            // Buat input rahasia baru untuk dikirim ke Laravel (database)
+            row.append('<input type="hidden" class="hidden-gabungan-layanan" name="kategori_treatment[]" value="' + teksGabungan + '">');
+            
+            // Matikan atribut name pada input asli agar tidak ikut terkirim ke database
+            layananAktif.removeAttr('name');
         }
+    });
+    // --- AKHIR LOGIKA GABUNG TEKS ---
+
+    // 2. PROSES AJAX KE BACKEND
+    let formData = $('#orderForm').serialize();
+    $.ajax({
+        url: "{{ route('orders.store') }}", 
+        type: "POST", 
+        data: formData, 
+        dataType: 'json', 
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        success: function(response) {
+            if(response.status === 'success') {
+                populateInvoice(response); // Invoice otomatis baca teks yang sudah digabung!
+                window.closePaymentModal();
+                document.getElementById('modal-invoice').style.display = 'flex';
+                document.getElementById('modal-invoice').classList.remove('hidden');
+            }
+        },
+        error: function(xhr) { 
+            alert("Gagal menyimpan: " + (xhr.responseJSON ? xhr.responseJSON.message : xhr.responseText)); 
+        }
+    });
+}
 
 function populateInvoice(data) {
             let order = data.order; 
@@ -865,29 +917,51 @@ function populateInvoice(data) {
             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
         }
 
-        window.filterTreatments = function(categorySelect) {
-            const row = categorySelect.closest('.treatment-row'); 
-            const treatmentSelect = row.querySelector('.treatment-select'); 
-            const treatmentInput = row.querySelector('.treatment-input');
-            const chevron = row.querySelector('.chevron-icon');
-            
-            treatmentSelect.innerHTML = '<option value="">Pilih</option>';
-            const selectedCategory = categorySelect.value; 
+window.filterTreatments = function(categorySelect) {
+    const row = categorySelect.closest('.treatment-row'); 
+    const treatmentSelect = row.querySelector('.treatment-select'); 
+    const treatmentInput = row.querySelector('.treatment-input');
+    const chevron = row.querySelector('.chevron-icon');
+    
+    // 1. Ambil elemen kontainer warna
+    const warnaContainer = row.querySelector('.warna-container');
+    const inputWarna = warnaContainer.querySelector('.input-warna');
 
-            if (selectedCategory === 'Custom') {
-                treatmentSelect.classList.add('hidden'); treatmentSelect.disabled = true;
-                treatmentInput.classList.remove('hidden'); treatmentInput.disabled = false; treatmentInput.focus();
-                if(chevron) chevron.classList.add('hidden');
-            } else {
-                treatmentSelect.classList.remove('hidden'); treatmentSelect.disabled = false;
-                treatmentInput.classList.add('hidden'); treatmentInput.disabled = true; treatmentInput.value = '';
-                if(chevron) chevron.classList.remove('hidden');
-                
-                if (!selectedCategory) return;
-                const filtered = rawTreatments.filter(t => t.kategori && t.kategori.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
-                filtered.forEach(t => { const option = document.createElement('option'); option.value = t.nama_treatment; option.textContent = t.nama_treatment; treatmentSelect.appendChild(option); });
-            }
-        }
+    treatmentSelect.innerHTML = '<option value="">Pilih</option>';
+    const selectedCategory = categorySelect.value; 
+
+    // 2. LOGIKA MEMUNCULKAN KOLOM WARNA
+    // Kita pakai .includes() agar teksnya tidak harus 100% sama persis.
+    // Selama ada kata "REPAINT" atau "CAT", input akan muncul.
+    const namaKategori = selectedCategory ? selectedCategory.toUpperCase() : '';
+    
+    if (namaKategori.includes('REPAINT') || namaKategori.includes('CAT')) {
+        warnaContainer.classList.remove('hidden');
+    } else {
+        warnaContainer.classList.add('hidden');
+        inputWarna.value = ''; // Bersihkan input jika kategori diubah lagi
+    }
+
+    // 3. Logika bawaan untuk Dropdown/Custom
+    if (selectedCategory === 'Custom') {
+        treatmentSelect.classList.add('hidden'); treatmentSelect.disabled = true;
+        treatmentInput.classList.remove('hidden'); treatmentInput.disabled = false; treatmentInput.focus();
+        if(chevron) chevron.classList.add('hidden');
+    } else {
+        treatmentSelect.classList.remove('hidden'); treatmentSelect.disabled = false;
+        treatmentInput.classList.add('hidden'); treatmentInput.disabled = true; treatmentInput.value = '';
+        if(chevron) chevron.classList.remove('hidden');
+        
+        if (!selectedCategory) return;
+        const filtered = rawTreatments.filter(t => t.kategori && t.kategori.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
+        filtered.forEach(t => { 
+            const option = document.createElement('option'); 
+            option.value = t.nama_treatment; 
+            option.textContent = t.nama_treatment; 
+            treatmentSelect.appendChild(option); 
+        });
+    }
+}
 
         function attachEventsToTreatmentRow(row) {
             const priceInput = row.querySelector('.harga-input'); if(!priceInput) return;
@@ -1013,4 +1087,44 @@ function populateInvoice(data) {
 
         function formatRupiahInput(input) { let val = input.value.replace(/[^0-9]/g, ''); input.value = val ? rupiahFormatter.format(val) : ''; }
     </script>
+    
+    <script>
+
+
+    // 2. LOGIKA TRIK 2 (MENGGABUNGKAN DATA SAAT DISIMPAN)
+    // Script ini berjalan otomatis saat kamu klik tombol submit / proses pembayaran
+    $('form').on('submit', function() {
+        
+        $('.warna-container').each(function() {
+            // Cek apakah kolom warna ini sedang aktif (kategori repaint sedang dipilih)
+            if (!$(this).hasClass('hidden')) {
+                let inputWarna = $(this).find('.input-warna').val();
+                
+                // Jika user mengetikkan sesuatu di kolom warna
+                if (inputWarna.trim() !== '') {
+                    let baris = $(this).closest('.grid');
+                    
+                    // Ambil elemen Layanan (baik yang select dropdown maupun input manual)
+                    let selectLayanan = baris.find('select[name="kategori_treatment[]"]');
+                    let inputLayanan = baris.find('input[name="kategori_treatment[]"]');
+                    
+                    // Cek mana yang sedang dipakai user (dropdown atau manual)
+                    let layananAktif = selectLayanan.is(':not(.hidden)') ? selectLayanan : inputLayanan;
+                    let nilaiLayanan = layananAktif.val();
+                    
+                    // GABUNGKAN TEKSNYA DISINI
+                    let nilaiGabungan = nilaiLayanan + ' - Warna: ' + inputWarna;
+                    
+                    // Buat inputan rahasia dengan data yang sudah digabung agar masuk ke database
+                    $(this).append('<input type="hidden" name="kategori_treatment[]" value="' + nilaiGabungan + '">');
+                    
+                    // Matikan nama input layanan yang asli agar datanya tidak ganda saat dikirim
+                    layananAktif.removeAttr('name');
+                }
+            }
+        });
+    });
+
+});
+</script>
 </x-app-layout>
