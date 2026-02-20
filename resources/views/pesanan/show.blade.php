@@ -11,6 +11,9 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    
+
     </style>
 
     {{-- MENGAMBIL DATA KLAIM LAMA DARI DATABASE (JIKA ADA) --}}
@@ -497,9 +500,17 @@
             <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 relative flex flex-col max-h-[90vh]">
                 <div id="invoice-content" class="bg-white p-6 invoice-area text-xs leading-snug text-black overflow-y-auto">
                     <div class="text-center mb-2">
-                        <div class="flex justify-center mb-2"><div class="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-xl">LC</div></div>
-                        <h2 class="text-xl font-bold tracking-widest uppercase mb-1">LOUWES CARE</h2>
-                        <p class="font-bold text-[10px] text-gray-600 uppercase tracking-wide">SHOE LAUNDRY & CARE</p>
+                        <div class="text-center mb-2">
+    <div class="flex justify-center mb-2">
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%;">
+            <img src="{{ asset('assets/icons/logolouwes.png') }}" 
+                 alt="Logo" 
+                 style="width: 120px; height: auto; display: block; margin: 0 auto;">
+        </div>
+    </div>
+    <h2 class="text-xl font-bold tracking-widest uppercase mb-1">LOUWES CARE</h2>
+    <p class="font-bold text-[10px] text-gray-600 uppercase tracking-wide">Clean - Fresh - Better</p>
+    </div>
                         <p class="text-[9px] mt-1 text-gray-500">Jl. Ringroad Timur No 9, Plumbon, Banguntapan, Bantul, DIY 55196</p>
                         <p class="text-[9px] text-gray-500">Instagram: @Louwes Shoes Care | WA: 081390154885</p>
                     </div>
@@ -525,25 +536,42 @@
                         <table class="w-full text-left text-[10px]">
                             <thead>
                                 <tr class="dashed-line text-gray-600 uppercase">
-                                    <th class="py-2 w-3/12">ITEM</th>
-                                    <th class="py-2 w-2/12">CATATAN</th>
-                                    <th class="py-2 w-3/12">TREATMENT</th>
-                                    <th class="py-2 w-2/12 text-center">KELUAR</th>
-                                    <th class="py-2 w-2/12 text-right">HARGA</th>
+                                    <th class="py-2 w-1/12 font-bold">ITEM & CATATAN</th>
+                                    <th class="py-2 w-3/12 font-bold">TREATMENT</th>
+                                    <th class="py-2 w-2/12 text-center font-bold">EST JADI</th>
+                                    <th class="py-2 w-2/12 text-right font-bold">HARGA</th>
                                 </tr>
                             </thead>
                             <tbody id="inv-items-body" class="dashed-line"></tbody>
                         </table>
                     </div>
                     <div class="flex justify-end mb-6">
-                        <div class="w-1/2">
+                        <div class="w-full">
                             <table class="w-full text-[11px]">
-                                <tr><td class="py-1 text-gray-600">Subtotal</td><td class="py-1 text-right" id="inv-subtotal"></td></tr>
-                                <tr class="dashed-line" id="inv-discount-row"><td class="py-1 text-gray-600" id="inv-discount-label">Diskon</td><td class="py-1 text-right" id="inv-discount"></td></tr>
-                                <tr><td class="py-2 font-bold text-sm">TOTAL</td><td class="py-2 font-bold text-sm text-right" id="inv-total"></td></tr>
-                                <tr id="inv-dp-row" class="hidden"><td class="py-1 text-gray-600 font-bold">DP Dibayar <span id="inv-dp-method" class="font-normal italic text-[9px]"></span></td><td class="py-1 text-right font-bold" id="inv-dp-amount"></td></tr>
-                                <tr id="inv-sisa-row" class="dashed-line hidden"><td class="py-1 text-gray-800 font-bold italic">SISA TAGIHAN</td><td class="py-1 text-right text-gray-800 font-bold italic" id="inv-sisa-amount"></td></tr>
-                                <tr id="inv-status-row"><td class="py-1 font-bold text-green-600 uppercase" id="inv-status"></td><td class="py-1 text-right text-green-600 text-[10px]" id="inv-method"></td></tr>
+                                <tr>
+                                    <td class="py-1 text-right pr-2 text-gray-600">Subtotal :</td>
+                                    <td class="py-1 text-right" id="inv-subtotal"></td>
+                                </tr>
+                                <tr class="dashed-line" id="inv-discount-row">
+                                    <td class="py-1 text-right pr-2 text-gray-600" id="inv-discount-label">Diskon :</td>
+                                    <td class="py-1 text-right" id="inv-discount"></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2 text-sm text-right pr-2 font-bold">TOTAL :</td>
+                                    <td class="py-2 text-sm text-right font-bold" id="inv-total"></td>
+                                </tr>
+                                <tr id="inv-dp-row" class="hidden">
+                                    <td class="py-1 text-right pr-2 text-gray-600 font-bold">DP Dibayar <span id="inv-dp-method" class="font-normal italic text-[9px]"></span> :</td>
+                                    <td class="py-1 text-right font-bold" id="inv-dp-amount"></td>
+                                </tr>
+                                <tr id="inv-sisa-row" class="dashed-line hidden">
+                                    <td class="py-1 text-right pr-2 text-gray-800 font-bold italic">SISA TAGIHAN :</td>
+                                    <td class="py-1 text-right text-gray-800 font-bold italic" id="inv-sisa-amount"></td>
+                                </tr>
+                                <tr id="inv-status-row">
+                                    <td class="py-1 uppercase text-right pr-2 font-bold" id="inv-status"></td>
+                                    <td class="py-1 text-right text-[10px]" id="inv-method"></td>
+                                </tr>
                             </table>
                         </div>
                     </div>
@@ -559,7 +587,6 @@
                             <ul class="list-disc pl-3 leading-tight space-y-0.5">
                                 <li>Barang rusak karena bahan sudah rapuh bukan tanggungjawab kami.</li>
                                 <li>Apabila barang tidak diambil lebih dari 3 Bulan setelah jadi , hilang bukan tanggung jawab kami.</li>
-                        
                             </ul>
                         </div>
                     </div>
@@ -573,8 +600,11 @@
         </div>
     </div>
 
-    {{-- SCRIPT JS --}}
+{{-- SCRIPT JS --}}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <script>
         var rupiahFormatter = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 });
 
@@ -608,7 +638,11 @@
                 url: "{{ route('pesanan.update', $order->id) }}", type: "POST", data: formData, dataType: 'json', headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 success: function(response) {
                     if(response.status === 'success') {
-                        if(shouldPrint) { populateInvoice(response); document.getElementById('modal-invoice').style.display = 'flex'; } 
+                        if(shouldPrint) { 
+                            populateInvoice(response); 
+                            // Hanya memunculkan pop-up modal, TIDAK otomatis print
+                            document.getElementById('modal-invoice').style.display = 'flex'; 
+                        } 
                         else { window.location.href = '{{ route("pesanan.index") }}'; }
                     }
                 },
@@ -637,22 +671,28 @@
 
             Object.values(groupedItems).forEach(group => {
                 let estStr = group.estimasi_keluar ? new Date(group.estimasi_keluar).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
-                let catatanStr = group.catatan.length > 0 ? group.catatan.join(', ') : '-';
+                let catatanStr = group.catatan.length > 0 ? group.catatan.join(', ') : '';
+                
+                // Jika ada catatan, tambahkan di bawah nama item dengan font lebih kecil (9px)
+                let itemContent = `<span>${group.nama_barang}</span>`;
+                if (catatanStr && catatanStr !== '-') {
+                    itemContent += `<br><span style="font-size: 9px;">Catatan: ${catatanStr}</span>`;
+                }
+
                 rows += `<tr>
-                    <td class="align-top border-b border-gray-100 py-1 pr-1"><span class="font-bold">${group.nama_barang}</span></td>
-                    <td class="align-top border-b border-gray-100 py-1 text-[10px]">${catatanStr}</td>
+                    <td class="align-top border-b border-gray-100 py-1 pr-1">${itemContent}</td>
                     <td class="align-top border-b border-gray-100 py-1 text-[10px]">${group.layanan.join(' + ')}</td>
                     <td class="align-top border-b border-gray-100 py-1 text-center text-[10px]">${estStr}</td>
                     <td class="align-top border-b border-gray-100 py-1 text-right">${rupiahFormatter.format(group.harga)}</td>
                 </tr>`;
             });
             
+            // Sesuaikan juga kolom parfum agar jumlah td-nya sama (4 kolom)
             if (claimType && claimType.toLowerCase().includes('parfum')) {
                 let match = claimType.match(/(\d+)\s*x\s*parfum/i);
                 let qtyParfum = match ? match[1] : 1;
                 rows += `<tr>
-                    <td class="align-top border-b border-gray-100 py-1 pr-1"><span class="font-bold">${qtyParfum}x Free Parfum</span></td>
-                    <td class="align-top border-b border-gray-100 py-1 text-[10px]">Klaim Reward</td>
+                    <td class="align-top border-b border-gray-100 py-1 pr-1"><span>${qtyParfum}x Free Parfum</span></td>
                     <td class="align-top border-b border-gray-100 py-1 text-[10px]">-</td>
                     <td class="align-top border-b border-gray-100 py-1 text-center text-[10px]">-</td>
                     <td class="align-top border-b border-gray-100 py-1 text-right">0</td>
@@ -665,7 +705,7 @@
             if (discountAmount > 0) {
                 let qtyDiskon = 1;
                 if (claimType) { let matchDiskon = claimType.match(/(\d+)\s*x\s*diskon/i); if (matchDiskon) qtyDiskon = matchDiskon[1]; }
-                $('#inv-discount-label').text(qtyDiskon + 'x Diskon Reward');
+                $('#inv-discount-label').text(qtyDiskon + 'x Diskon :');
                 $('#inv-discount').text('- ' + rupiahFormatter.format(discountAmount));
                 $('#inv-discount-row').removeClass('hidden');
             } else { $('#inv-discount-row').addClass('hidden'); }
@@ -687,27 +727,87 @@
             if (claimType) { msgDiv.text('*** REWARD: ' + claimType.toUpperCase() + ' ***').removeClass('hidden'); } else { msgDiv.addClass('hidden'); }
         }
 
+        // 3. FUNGSI DOWNLOAD PDF 80MM
         window.printInvoice = function() {
-            var invNo = $('#inv-no').text().trim(); var custName = $('#inv-cust-name').text().trim();
-            document.title = invNo + ' - ' + custName;
-            var iframeId = 'invoice-print-frame'; var iframe = document.getElementById(iframeId);
+            var invNo = $('#inv-no').text().trim() || 'Invoice'; 
+            var content = document.getElementById('invoice-content').innerHTML;
+            
+            var iframeId = 'invoice-print-frame';
+            var iframe = document.getElementById(iframeId);
             if (iframe) { document.body.removeChild(iframe); }
-            iframe = document.createElement('iframe'); iframe.id = iframeId; iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+            
+            iframe = document.createElement('iframe');
+            iframe.id = iframeId;
+            iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
             document.body.appendChild(iframe);
-            var doc = iframe.contentWindow.document; doc.open();
-            doc.write('<html><head><title>' + document.title + '</title>');
-            doc.write('<style>body{font-family:"Helvetica","Arial",sans-serif;font-size:12px;margin:0;padding:10px;color:#000}.text-center{text-align:center}.text-right{text-align:right}.font-bold{font-weight:700}.uppercase{text-transform:uppercase}.italic{font-style:italic}.hidden{display:none}table{width:100%;border-collapse:collapse;margin-bottom:5px}td,th{vertical-align:top;padding:2px 0}.w-4\\/12{width:35%}.w-3\\/12{width:25%}.w-2\\/12{width:15%}.text-\\[10px\\]{font-size:10px}.text-\\[9px\\]{font-size:9px}.dashed-line{border-bottom:1px dashed #000}.thick-line{border-bottom:2px solid #000}.border-b{border-bottom:1px solid #000}ul{padding-left:15px;margin:5px 0}.flex{display:flex;justify-content:space-between;align-items:flex-end}</style>');
-            doc.write('</head><body>' + document.getElementById('invoice-content').innerHTML + '</body></html>'); doc.close();
-            doc.title = document.title;
-            setTimeout(function() { iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
+            
+            var doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write('<html><head><title>' + invNo + '</title>');
+            doc.write('<style>');
+
+
+            // Tambahkan baris-baris ini di dalam bagian style doc.write Anda
+            doc.write('.flex { display: flex; justify-content: center; align-items: center; width: 100%; }');
+            doc.write('.justify-center { justify-content: center; }');
+            doc.write('.text-center { text-align: center; }');
+
+            // Memastikan gambar berada di tengah dan ukurannya proporsional
+            doc.write('img { display: block; margin: 0 auto; max-width: 60mm; height: auto; }');
+
+            // Memaksa kolom Item dan Treatment untuk mepet ke kiri (0 padding)
+doc.write('th, td { vertical-align: top; padding-top: 4px; padding-bottom: 4px; }');
+doc.write('th:nth-child(1), td:nth-child(1), th:nth-child(2), td:nth-child(2) { text-align: left; padding-left: 0 !important; }');
+
+// Perataan untuk kolom lainnya
+doc.write('th.text-center, td.text-center { text-align: center; }');
+doc.write('th.text-right, td.text-right { text-align: right; }');
+
+// Memastikan lebar kolom tetap konsisten
+doc.write('.w-5\\/12 { width: 41.66%; }');
+doc.write('.w-3\\/12 { width: 25%; }');
+            
+            // 1. KUNCI UTAMA: Hilangkan batasan tinggi dan overflow agar menyambung
+            doc.write('html, body { margin: 0 !important; padding: 0 !important; height: auto !important; min-height: 0 !important; overflow: visible !important; font-family:"Helvetica","Arial",sans-serif; font-size:12px; color:#000; }');
+            
+            doc.write('table { width: 100%; border-collapse: collapse; table-layout: fixed; }');
+            doc.write('td, th { word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; }');
+            
+            // Konversi layout Tailwind Anda
+            doc.write('.w-1\\/2{width:50%;} .w-5\\/12{width:41.66%;} .w-3\\/12{width:25%;} .w-2\\/12{width:16.66%;} .w-full{width:100%;}');
+            doc.write('.text-center{text-align:center;} .text-right{text-align:right;} .pr-2{padding-right:8px;}');
+            doc.write('.dashed-line{border-bottom:1px dashed #000;} .thick-line{border-bottom:2px solid #000;} .border-b{border-bottom:1px solid #000;}');
+            
+            // Pertahankan style sebelumnya (Bold, Ukuran, dll)
+            doc.write('.font-bold{font-weight:bold;} .font-normal{font-weight:normal;} .italic{font-style:italic;} .uppercase{text-transform:uppercase;}');
+            doc.write('.text-xl{font-size:20px;} .text-2xl{font-size:24px;} .text-sm{font-size:14px;} .text-\\[10px\\]{font-size:10px;} .text-\\[9px\\]{font-size:9px;} .text-\\[11px\\]{font-size:11px;}');
+            doc.write('.mb-1{margin-bottom:4px;} .mb-2{margin-bottom:8px;} .mb-3{margin-bottom:12px;} .mb-4{margin-bottom:16px;} .mb-6{margin-bottom:24px;} .mt-1{margin-top:4px;} .mt-2{margin-top:8px;} .mt-6{margin-top:24px;}');
+            doc.write('.hidden{display:none;} .flex{display:flex;justify-content:space-between;align-items:flex-start;}');
+            doc.write('ul{padding-left:15px;margin:5px 0;}');
+
+            // 2. ANTI-POTONG: Mencegah garis double dan pemotongan halaman
+            doc.write('@media print {');
+            doc.write('  @page { size: 80mm auto; margin: 0; }'); // 'auto' memungkinkan kertas memanjang sesuai isi
+            doc.write('  thead { display: table-row-group; }'); // Mencegah judul kolom berulang (garis double)
+            doc.write('  table, tr, td, th, p, div { page-break-inside: avoid !important; break-inside: avoid !important; }'); // Anti-potong
+            doc.write('}');
+            
+            doc.write('</style></head><body>');
+            doc.write(content);
+            doc.write('</body></html>');
+            doc.close();
+            
+            iframe.contentWindow.focus();
+            setTimeout(function() {
+                iframe.contentWindow.print();
+            }, 250);
         }
 
         function formatRupiahInput(input) { let value = input.value.replace(/[^0-9]/g, ''); if (value) { input.value = new Intl.NumberFormat('id-ID').format(value); } else { input.value = ''; } }
-    
-// Data mentah treatments dari Laravel dikirim ke JavaScript
+
+        // Fungsi baru dari permintaan awal untuk Kategori + Layanan + Warna
         const rawTreatmentsDetail = @json($treatments ?? []);
 
-        // Fungsi saat Dropdown Kategori diubah
         window.filterTreatmentsDetail = function(categorySelect) {
             const wrapper = categorySelect.closest('.layanan-wrapper');
             const treatmentSelect = wrapper.querySelector('.treatment-select');
@@ -715,15 +815,13 @@
             const warnaInput = wrapper.querySelector('.input-warna');
             const selectedCategory = categorySelect.value;
             
-            // 1. Munculkan Warna jika Repaint/Cat
             if (selectedCategory.toUpperCase().includes('REPAINT') || selectedCategory.toUpperCase().includes('CAT')) {
                 warnaInput.classList.remove('hidden');
             } else {
                 warnaInput.classList.add('hidden');
-                warnaInput.value = ''; // Reset warna
+                warnaInput.value = ''; 
             }
 
-            // 2. Tampilkan Dropdown atau Input Manual
             if (selectedCategory === 'Custom') {
                 treatmentSelect.classList.add('hidden'); treatmentSelect.disabled = true;
                 treatmentInput.classList.remove('hidden'); treatmentInput.disabled = false;
@@ -733,7 +831,6 @@
                 treatmentSelect.classList.remove('hidden'); treatmentSelect.disabled = false;
                 treatmentInput.classList.add('hidden'); treatmentInput.disabled = true;
                 
-                // Filter ulang isi dropdown layanan
                 treatmentSelect.innerHTML = '<option value="">Pilih Layanan</option>';
                 const filtered = rawTreatmentsDetail.filter(t => t.kategori && t.kategori.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
                 
@@ -745,11 +842,9 @@
                 });
             }
             
-            // 3. Update Input Gabungan
             updateHiddenLayanan(categorySelect);
         };
 
-        // Fungsi menggabungkan Kategori + Layanan + Warna ke Database
         window.updateHiddenLayanan = function(element) {
             const wrapper = element.closest('.layanan-wrapper');
             const categorySelect = wrapper.querySelector('.category-select');
@@ -759,18 +854,14 @@
             const hiddenInput = wrapper.querySelector('.hidden-kategori-treatment');
 
             let kategori = categorySelect.value;
-            // Cek mana yang dipakai (Manual atau Dropdown)
             let layanan = (kategori === 'Custom') ? treatmentInput.value : treatmentSelect.value;
-            // Cek apakah ada warna
             let warna = (!warnaInput.classList.contains('hidden') && warnaInput.value.trim() !== '') ? ' - Warna: ' + warnaInput.value : '';
 
-            // Gabungkan Teks seperti format Input Order
             if (kategori && layanan) {
                 hiddenInput.value = kategori + ' - ' + layanan + warna;
             } else {
                 hiddenInput.value = '';
             }
         };
-    
     </script>
 </x-app-layout>

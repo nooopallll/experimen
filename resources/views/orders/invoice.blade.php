@@ -2,42 +2,58 @@
 <html>
 <head>
     <title>Invoice {{ $order->no_invoice }}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* Desain area yang akan dicetak */
+        /* Desain area layar */
         body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; background-color: #f3f4f6;}
         
+        /* Ukuran dibatasi 75mm agar ada margin aman di kertas 80mm */
         #invoice-container { 
-            width: 300px; 
-            padding: 15px; 
-            background-color: white; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box; width: 75mm; padding: 2mm; 
+            background-color: white; overflow: hidden; 
         }
         
         .center { text-align: center; }
-        .bold { font-weight: bold; }
+        .bold { font-weight: normal; } /* Mematikan bold pada class bold */
+        h2, th { font-weight: normal; } /* Mematikan bold bawaan pada Judul dan Tabel */
         .border-top { border-top: 1px dashed #000; margin-top: 5px; padding-top: 5px; }
-        table { width: 100%; border-collapse: collapse; }
+        
+        /* Anti kepotong */
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        td, th { word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; }
+        
+        /* Pembagian kolom tabel 2 baris (Kiri dan Kanan) */
+        th:nth-child(1), td:nth-child(1) { width: 65%; text-align: left; }
+        th:nth-child(2), td:nth-child(2) { width: 35%; text-align: right; }
+        
         .footer { font-size: 10px; margin-top: 15px; text-align: center; }
 
-        /* Desain Tombol Aksi (Hanya terlihat di layar) */
-        .action-buttons {
-            width: 300px;
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        .btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
+        /* Tombol Bantuan (Di layar) */
+        .no-print { margin-top: 20px; display: flex; gap: 10px; width: 75mm; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; text-align: center; }
         .btn-blue { background-color: #3b66ff; color: white; }
         .btn-gray { background-color: #e5e7eb; color: #374151; }
+
+        /* ====== PENGATURAN KHUSUS MESIN PRINTER ====== */
+        @media print {
+            html, body { 
+                background-color: white; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                height: auto; 
+            }
+            .no-print { display: none !important; } 
+            thead { display: table-row-group; }
+            
+            /* Memaksa elemen tidak terpotong atau membuat halaman baru */
+            table, tr, td, th, p, div {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+        @page {
+            size: 80mm auto; /* Membiarkan panjang kertas menyesuaikan isi (roll) */
+            margin: 0mm;
+        }
     </style>
 </head>
 <body>
@@ -63,15 +79,24 @@
 
         <table class="border-top">
             <thead>
-                <tr align="left">
+                <tr>
                     <th>ITEM</th>
-                    <th align="right">TOTAL</th>
+                    <th>TOTAL</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($order->details as $item)
                 <tr>
-                    <td>{{ $item->nama_barang }}<br><small>({{ $item->layanan }})</small></td>
+                    <td>
+                        {{ $item->nama_barang }}
+                        
+                        {{-- Menampilkan catatan jika ada, dengan font lebih kecil --}}
+                        @if(!empty($item->catatan) && $item->catatan !== '-')
+                            <br><span style="font-size: 9px;">Catatan: {{ $item->catatan }}</span>
+                        @endif
+                        
+                        <br><small>({{ $item->layanan }})</small>
+                    </td>
                     <td align="right">{{ number_format($item->harga, 0, ',', '.') }}</td>
                 </tr>
                 @endforeach
@@ -85,22 +110,22 @@
                     $discount = $originalTotal - $order->total_harga;
                 @endphp
                 <tr>
-                    <td>Subtotal</td>
-                    <td align="right">Rp {{ number_format($originalTotal, 0, ',', '.') }}</td>
+                    <td style="text-align: right; padding-right: 8px;">Subtotal :</td>
+                    <td>Rp {{ number_format($originalTotal, 0, ',', '.') }}</td>
                 </tr>
                 @if($discount > 0)
                 <tr>
-                    <td>* Diskon Reward (Rp {{ number_format(\App\Models\Setting::getDiskonMember(), 0, ',', '.') }})</td>
-                    <td align="right">- Rp {{ number_format($discount, 0, ',', '.') }}</td>
+                    <td style="text-align: right; padding-right: 8px;">Diskon Reward :</td>
+                    <td>- Rp {{ number_format($discount, 0, ',', '.') }}</td>
                 </tr>
                 @endif
                 <tr class="bold">
-                    <td>TOTAL</td>
-                    <td align="right">Rp {{ number_format($order->total_harga, 0, ',', '.') }}</td>
+                    <td style="text-align: right; padding-right: 8px;">TOTAL :</td>
+                    <td>Rp {{ number_format($order->total_harga, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td>{{ $order->status_pembayaran }}</td>
-                    <td align="right">via {{ $order->metode_pembayaran ?? '-' }}</td>
+                    <td style="text-align: right; padding-right: 8px;">{{ $order->status_pembayaran }} :</td>
+                    <td>via {{ $order->metode_pembayaran ?? '-' }}</td>
                 </tr>
             </table>
         </div>
@@ -121,39 +146,15 @@
         </div>
     </div>
 
-    <div class="action-buttons">
-        <button class="btn btn-blue" onclick="downloadPDF()">Download Ulang</button>
+    <div class="no-print">
+        <button class="btn btn-blue" onclick="window.print()">Cetak Struk</button>
         <button class="btn btn-gray" onclick="window.close()">Tutup</button>
     </div>
 
     <script>
-        function downloadPDF() {
-            // Ambil nomor nota dan nama untuk format nama file
-            var invNo = document.getElementById('inv-no').innerText.trim() || 'Invoice';
-            var custName = document.getElementById('inv-cust-name').innerText.trim() || 'Customer';
-            var fileName = invNo + ' - ' + custName + '.pdf';
-            
-            // Elemen yang akan dijadikan PDF
-            var element = document.getElementById('invoice-container');
-
-            // Pengaturan ukuran kertas (format custom mirip kertas thermal)
-            var opt = {
-                margin:       0.1,
-                filename:     fileName,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: [3.3, 6], orientation: 'portrait' } 
-            };
-
-            // Proses generate dan download
-            html2pdf().set(opt).from(element).save();
-        }
-
-        // Otomatis download ketika halaman selesai dimuat (jeda 500ms agar font ter-load)
+        // Panggil jendela print secara otomatis dengan jeda 500ms
         window.onload = function() {
-            setTimeout(function() {
-                downloadPDF();
-            }, 500);
+            setTimeout(function() { window.print(); }, 500);
         };
     </script>
 </body>
