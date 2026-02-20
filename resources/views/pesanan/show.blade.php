@@ -288,11 +288,69 @@
                                                 <input type="hidden" name="catatan_detail[]" value="{{ $item->catatan }}" class="group-catatan-{{ $loop->parent->index }}">
                                             @endif
                                             
-                                            <td class="p-2 align-top">
-                                                <select name="kategori_treatment[]" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm cursor-pointer">
-                                                    @foreach($treatments as $t) <option value="{{ $t->nama_treatment }}" {{ $item->layanan == $t->nama_treatment ? 'selected' : '' }}>{{ $t->nama_treatment }}</option> @endforeach
+                                            <td class="p-2 align-top layanan-wrapper">
+                                            {{-- 1. PEMECAHAN STRING (PARSING) DARI DATABASE --}}
+                                            @php
+                                                $layananUtuh = $item->layanan;
+                                                
+                                                // Pisahkan warna
+                                                $partsWarna = explode(' - Warna: ', $layananUtuh);
+                                                $layananTanpaWarna = $partsWarna[0];
+                                                $warna = isset($partsWarna[1]) ? $partsWarna[1] : '';
+                                                
+                                                // Pisahkan Kategori dan Nama Layanan
+                                                $partsLayanan = explode(' - ', $layananTanpaWarna, 2);
+                                                if (count($partsLayanan) > 1) {
+                                                    $kategori = trim($partsLayanan[0]);
+                                                    $namaLayanan = trim($partsLayanan[1]);
+                                                } else {
+                                                    // Jika format lama tidak pakai " - ", jadikan Custom
+                                                    $kategori = 'Custom';
+                                                    $namaLayanan = trim($layananTanpaWarna);
+                                                }
+                                                
+                                                $isRepaint = (stripos($kategori, 'repaint') !== false || stripos($kategori, 'cat') !== false);
+                                                
+                                                // Ambil daftar kategori unik
+                                                $kategoriList = $treatments->pluck('kategori')->unique()->filter()->values();
+                                                
+                                                // Cek jika kategori dari DB ternyata sudah dihapus dari master, masuk ke Custom
+                                                if ($kategori !== 'Custom' && !$kategoriList->contains($kategori)) {
+                                                    $kategori = 'Custom';
+                                                    $namaLayanan = $layananTanpaWarna; 
+                                                }
+                                            @endphp
+
+                                            <div class="flex flex-col space-y-1">
+                                                {{-- 2. DROPDOWN KATEGORI --}}
+                                                <select class="category-select w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs text-gray-900 focus:bg-white focus:border-blue-500 cursor-pointer" onchange="filterTreatmentsDetail(this)">
+                                                    <option value="">Pilih Kategori</option>
+                                                    @foreach($kategoriList as $kat)
+                                                        <option value="{{ $kat }}" {{ $kategori == $kat ? 'selected' : '' }}>{{ $kat }}</option>
+                                                    @endforeach
+                                                    <option value="Custom" {{ $kategori == 'Custom' ? 'selected' : '' }}>+ Custom (Manual)</option>
                                                 </select>
-                                            </td>
+
+                                                {{-- 3. DROPDOWN / INPUT LAYANAN --}}
+                                                <select class="treatment-select w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs text-gray-900 focus:bg-white focus:border-blue-500 cursor-pointer {{ $kategori == 'Custom' ? 'hidden' : '' }}" onchange="updateHiddenLayanan(this)">
+                                                    <option value="">Pilih Layanan</option>
+                                                    @if($kategori !== 'Custom')
+                                                        @foreach($treatments->where('kategori', $kategori) as $t)
+                                                            <option value="{{ $t->nama_treatment }}" {{ $namaLayanan == $t->nama_treatment ? 'selected' : '' }}>{{ $t->nama_treatment }}</option>
+                                                        @endforeach
+                                                    @endif
+                                                </select>
+                                                
+                                                {{-- Input Manual jika Custom --}}
+                                                <input type="text" class="treatment-input w-full px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-900 focus:border-blue-500 {{ $kategori == 'Custom' ? '' : 'hidden' }}" placeholder="Ketik layanan manual..." value="{{ $kategori == 'Custom' ? $namaLayanan : '' }}" oninput="updateHiddenLayanan(this)" {{ $kategori == 'Custom' ? '' : 'disabled' }}>
+
+                                                {{-- 4. INPUT WARNA --}}
+                                                <input type="text" class="input-warna w-full px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-900 focus:border-blue-500 {{ $isRepaint ? '' : 'hidden' }}" placeholder="Warna (cth: Merah)" value="{{ $warna }}" oninput="updateHiddenLayanan(this)">
+
+                                                {{-- 5. INPUT RAHASIA (GABUNGAN) UNTUK DATABASE --}}
+                                                <input type="hidden" name="kategori_treatment[]" class="hidden-kategori-treatment" value="{{ $layananUtuh }}">
+                                            </div>
+                                        </td>
                                             
                                             @if($index === 0)
                                             <td class="p-2 align-top" rowspan="{{ count($details) }}"><input type="date" name="tanggal_keluar[]" value="{{ $item->estimasi_keluar ? \Carbon\Carbon::parse($item->estimasi_keluar)->format('Y-m-d') : '' }}" class="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs" onchange="syncInputs('group-date-{{ $loop->parent->index }}', this.value)"></td>
@@ -645,5 +703,74 @@
         }
 
         function formatRupiahInput(input) { let value = input.value.replace(/[^0-9]/g, ''); if (value) { input.value = new Intl.NumberFormat('id-ID').format(value); } else { input.value = ''; } }
+    
+// Data mentah treatments dari Laravel dikirim ke JavaScript
+        const rawTreatmentsDetail = @json($treatments ?? []);
+
+        // Fungsi saat Dropdown Kategori diubah
+        window.filterTreatmentsDetail = function(categorySelect) {
+            const wrapper = categorySelect.closest('.layanan-wrapper');
+            const treatmentSelect = wrapper.querySelector('.treatment-select');
+            const treatmentInput = wrapper.querySelector('.treatment-input');
+            const warnaInput = wrapper.querySelector('.input-warna');
+            const selectedCategory = categorySelect.value;
+            
+            // 1. Munculkan Warna jika Repaint/Cat
+            if (selectedCategory.toUpperCase().includes('REPAINT') || selectedCategory.toUpperCase().includes('CAT')) {
+                warnaInput.classList.remove('hidden');
+            } else {
+                warnaInput.classList.add('hidden');
+                warnaInput.value = ''; // Reset warna
+            }
+
+            // 2. Tampilkan Dropdown atau Input Manual
+            if (selectedCategory === 'Custom') {
+                treatmentSelect.classList.add('hidden'); treatmentSelect.disabled = true;
+                treatmentInput.classList.remove('hidden'); treatmentInput.disabled = false;
+                treatmentInput.value = '';
+                treatmentSelect.innerHTML = '<option value="">Pilih Layanan</option>';
+            } else {
+                treatmentSelect.classList.remove('hidden'); treatmentSelect.disabled = false;
+                treatmentInput.classList.add('hidden'); treatmentInput.disabled = true;
+                
+                // Filter ulang isi dropdown layanan
+                treatmentSelect.innerHTML = '<option value="">Pilih Layanan</option>';
+                const filtered = rawTreatmentsDetail.filter(t => t.kategori && t.kategori.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
+                
+                filtered.forEach(t => { 
+                    const option = document.createElement('option'); 
+                    option.value = t.nama_treatment; 
+                    option.textContent = t.nama_treatment; 
+                    treatmentSelect.appendChild(option); 
+                });
+            }
+            
+            // 3. Update Input Gabungan
+            updateHiddenLayanan(categorySelect);
+        };
+
+        // Fungsi menggabungkan Kategori + Layanan + Warna ke Database
+        window.updateHiddenLayanan = function(element) {
+            const wrapper = element.closest('.layanan-wrapper');
+            const categorySelect = wrapper.querySelector('.category-select');
+            const treatmentSelect = wrapper.querySelector('.treatment-select');
+            const treatmentInput = wrapper.querySelector('.treatment-input');
+            const warnaInput = wrapper.querySelector('.input-warna');
+            const hiddenInput = wrapper.querySelector('.hidden-kategori-treatment');
+
+            let kategori = categorySelect.value;
+            // Cek mana yang dipakai (Manual atau Dropdown)
+            let layanan = (kategori === 'Custom') ? treatmentInput.value : treatmentSelect.value;
+            // Cek apakah ada warna
+            let warna = (!warnaInput.classList.contains('hidden') && warnaInput.value.trim() !== '') ? ' - Warna: ' + warnaInput.value : '';
+
+            // Gabungkan Teks seperti format Input Order
+            if (kategori && layanan) {
+                hiddenInput.value = kategori + ' - ' + layanan + warna;
+            } else {
+                hiddenInput.value = '';
+            }
+        };
+    
     </script>
 </x-app-layout>
